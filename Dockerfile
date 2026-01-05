@@ -22,6 +22,9 @@ RUN npm run build
 # Production stage
 FROM node:18-alpine AS runner
 
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl1.1-compat
+
 WORKDIR /app
 
 # Create a non-root user
