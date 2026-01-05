@@ -34,6 +34,9 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
+# Copy Prisma schema first (needed for postinstall)
+COPY --from=builder /app/prisma ./prisma
+
 # Install only production dependencies
 COPY --from=builder /app/package*.json ./
 RUN npm ci --only=production && npm cache clean --force
@@ -42,7 +45,6 @@ RUN npm ci --only=production && npm cache clean --force
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 
 # Set ownership
