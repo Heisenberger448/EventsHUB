@@ -27,7 +27,7 @@ export default function EventPage({ params }: { params: { eventSlug: string } })
 
   useEffect(() => {
     fetchEvent()
-  }, [params.eventSlug])
+  }, [fetchEvent, params.eventSlug])
 
   const fetchEvent = async () => {
     try {

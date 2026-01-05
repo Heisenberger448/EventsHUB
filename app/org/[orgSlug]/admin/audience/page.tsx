@@ -31,7 +31,7 @@ export default function AudiencePage({ params }: { params: { orgSlug: string } }
 
   useEffect(() => {
     filterAmbassadors()
-  }, [searchTerm, statusFilter, ambassadors])
+  }, [filterAmbassadors, searchTerm, statusFilter, ambassadors])
 
   const fetchOrgInfo = async () => {
     try {

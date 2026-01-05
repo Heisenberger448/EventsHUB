@@ -42,7 +42,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
   useEffect(() => {
     fetchData()
-  }, [params.orgSlug])
+  }, [fetchData, params.orgSlug])
 
   const fetchData = async () => {
     try {

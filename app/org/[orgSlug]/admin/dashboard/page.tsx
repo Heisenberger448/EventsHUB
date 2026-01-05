@@ -50,10 +50,10 @@ export default function OrgDashboardPage({ params }: { params: { orgSlug: string
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">
-            Welcome, You're logged in!
+            Welcome, You&rsquo;re logged in!
           </h2>
           <p className="text-gray-600 mt-1">
-            Here's an overview of your organization
+            Here&rsquo;s an overview of your organization
           </p>
         </div>
 
