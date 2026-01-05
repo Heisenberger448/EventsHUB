@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: sharedcrowd-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sharedcrowd
+      POSTGRES_PASSWORD: sharedcrowd123
+      POSTGRES_DB: sharedcrowd
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sharedcrowd"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+    driver: local
