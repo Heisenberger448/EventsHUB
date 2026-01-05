@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(req.url)
+    const { searchParams } = new URL(request.url)
     const email = searchParams.get('email')
     
     // If email query param is provided, fetch ambassadors for that email (for mobile app)
