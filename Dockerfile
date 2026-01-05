@@ -2,7 +2,7 @@
 FROM node:18-alpine AS builder
 
 # Install OpenSSL for Prisma
-RUN apk add --no-cache openssl1.1-compat
+RUN apk add --no-cache openssl libssl1.1
 
 WORKDIR /app
 
@@ -26,7 +26,7 @@ RUN npm run build
 FROM node:18-alpine AS runner
 
 # Install OpenSSL for Prisma
-RUN apk add --no-cache openssl1.1-compat
+RUN apk add --no-cache openssl libssl1.1
 
 WORKDIR /app
 
