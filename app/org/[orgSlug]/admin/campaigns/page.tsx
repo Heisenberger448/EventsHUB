@@ -40,10 +40,6 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
     status: 'DRAFT' as const
   })
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData, params.orgSlug])
-
   const fetchData = async () => {
     try {
       // Fetch org name
@@ -81,6 +77,10 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
       setLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData, params.orgSlug])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
