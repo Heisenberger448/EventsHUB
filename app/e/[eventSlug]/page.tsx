@@ -25,10 +25,6 @@ export default function EventPage({ params }: { params: { eventSlug: string } })
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
 
-  useEffect(() => {
-    fetchEvent()
-  }, [fetchEvent, params.eventSlug])
-
   const fetchEvent = async () => {
     try {
       const res = await fetch(`/api/events/slug/${params.eventSlug}`)
@@ -38,17 +34,20 @@ export default function EventPage({ params }: { params: { eventSlug: string } })
         } else {
           throw new Error('Failed to fetch event')
         }
-        return
+      } else {
+        const eventData = await res.json()
+        setEvent(eventData)
       }
-      const data = await res.json()
-      setEvent(data)
     } catch (err) {
-      setError('Failed to load event')
-      console.error(err)
+      setError('Something went wrong')
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    fetchEvent()
+  }, [params.eventSlug])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
