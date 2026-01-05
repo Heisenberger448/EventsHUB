@@ -29,6 +29,25 @@ export default function AudiencePage({ params }: { params: { orgSlug: string } }
     fetchOrgInfo()
   }, [])
 
+  const filterAmbassadors = () => {
+    let filtered = ambassadors
+
+    if (searchTerm) {
+      filtered = filtered.filter(
+        amb =>
+          amb.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          amb.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          amb.event.name.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    }
+
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(amb => amb.status === statusFilter)
+    }
+
+    setFilteredAmbassadors(filtered)
+  }
+
   useEffect(() => {
     filterAmbassadors()
   }, [filterAmbassadors, searchTerm, statusFilter, ambassadors])
@@ -58,25 +77,6 @@ export default function AudiencePage({ params }: { params: { orgSlug: string } }
     } finally {
       setLoading(false)
     }
-  }
-
-  const filterAmbassadors = () => {
-    let filtered = ambassadors
-
-    if (searchTerm) {
-      filtered = filtered.filter(
-        amb =>
-          amb.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          amb.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          amb.event.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(amb => amb.status === statusFilter)
-    }
-
-    setFilteredAmbassadors(filtered)
   }
 
   const updateStatus = async (ambassadorId: string, status: string) => {
