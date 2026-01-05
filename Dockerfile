@@ -7,8 +7,8 @@ WORKDIR /app
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install all dependencies (including dev deps for build)
+RUN npm ci && npm cache clean --force
 
 # Generate Prisma client
 RUN npx prisma generate
@@ -27,6 +27,10 @@ WORKDIR /app
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
+
+# Install only production dependencies
+COPY --from=builder /app/package*.json ./
+RUN npm ci --only=production && npm cache clean --force
 
 # Copy necessary files from builder stage
 COPY --from=builder /app/public ./public
