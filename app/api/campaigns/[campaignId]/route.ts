@@ -22,7 +22,7 @@ export async function GET(
         },
         completions: {
           include: {
-            ambassador: {
+            user: {
               select: {
                 id: true,
                 name: true,
