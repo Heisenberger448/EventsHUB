@@ -148,7 +148,7 @@ export async function POST(
         email,
         name,
         passwordHash,
-        role: 'AMBASSADOR'
+        role: 'ORG_USER'
       }
     })
 
