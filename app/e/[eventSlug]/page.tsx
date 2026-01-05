@@ -41,7 +41,7 @@ export default function EventPage({ params }: { params: { eventSlug: string } })
     } catch (err) {
       setError('Something went wrong')
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
