@@ -20,8 +20,20 @@ export default function EventPage({ params }: { params: { eventSlug: string } })
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [mode, setMode] = useState<'choice' | 'login' | 'register'>('choice')
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' })
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    gender: 'Man',
+    birthDate: '',
+    address: '',
+    phone: '',
+    email: '',
+    instagram: 'instagram.com/',
+    tiktok: 'tiktok.com/@',
+    agreeTerms: false,
+    agreeUpdates: false,
+    password: ''
+  })
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
 
@@ -58,47 +70,55 @@ export default function EventPage({ params }: { params: { eventSlug: string } })
     try {
       if (!event) return
 
-      if (mode === 'login') {
-        // Login first, then register
-        const loginRes = await fetch('/api/ambassadors/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: formData.email, password: formData.password })
+      if (!formData.agreeTerms) {
+        throw new Error('Je moet akkoord gaan met de gebruiksvoorwaarden')
+      }
+
+      const fullName = `${formData.firstName} ${formData.lastName}`.trim()
+
+      // Register mode: Create account + register for event
+      const registerRes = await fetch(`/api/events/${event.id}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: fullName,
+          email: formData.email,
+          password: formData.password || 'ambassador123', // Default password if not provided
+          // Additional fields can be stored in a separate profile table later
+          metadata: {
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            gender: formData.gender,
+            birthDate: formData.birthDate,
+            address: formData.address,
+            phone: formData.phone,
+            instagram: formData.instagram,
+            tiktok: formData.tiktok,
+            agreeUpdates: formData.agreeUpdates
+          }
         })
+      })
 
-        if (!loginRes.ok) {
-          throw new Error('Onjuiste inloggegevens')
-        }
-
-        const loginData = await loginRes.json()
-
-        // Now register for event with ambassadorId
-        const registerRes = await fetch(`/api/events/${event.id}/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ambassadorId: loginData.id })
-        })
-
-        if (!registerRes.ok) {
-          const data = await registerRes.json()
-          throw new Error(data.error || 'Aanmelding mislukt')
-        }
-      } else {
-        // Register mode: Create account + register for event
-        const registerRes = await fetch(`/api/events/${event.id}/register`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        })
-
-        if (!registerRes.ok) {
-          const data = await registerRes.json()
-          throw new Error(data.error || 'Aanmelding mislukt')
-        }
+      if (!registerRes.ok) {
+        const data = await registerRes.json()
+        throw new Error(data.error || 'Aanmelding mislukt')
       }
 
       setSuccess(true)
-      setFormData({ name: '', email: '', password: '' })
+      setFormData({
+        firstName: '',
+        lastName: '',
+        gender: 'Man',
+        birthDate: '',
+        address: '',
+        phone: '',
+        email: '',
+        instagram: 'instagram.com/',
+        tiktok: 'tiktok.com/@',
+        agreeTerms: false,
+        agreeUpdates: false,
+        password: ''
+      })
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -108,18 +128,18 @@ export default function EventPage({ params }: { params: { eventSlug: string } })
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-400 via-pink-500 to-orange-400">
+        <div className="text-lg text-white">Loading...</div>
       </div>
     )
   }
 
   if (error && !event) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Event Not Found</h1>
-          <p className="text-gray-600">{error}</p>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-400 via-pink-500 to-orange-400">
+        <div className="text-center text-white">
+          <h1 className="text-2xl font-bold mb-2">Event Not Found</h1>
+          <p>{error}</p>
         </div>
       </div>
     )
@@ -128,194 +148,211 @@ export default function EventPage({ params }: { params: { eventSlug: string } })
   if (!event) return null
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-12 px-4">
-      <div className="max-w-3xl mx-auto">
-        {/* Event Header */}
-        <div className="bg-white shadow-lg rounded-lg p-8 mb-8">
-          <div className="mb-4">
-            <span className="text-sm text-gray-500 uppercase tracking-wide">
-              {event.organization.name}
-            </span>
-          </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">{event.name}</h1>
+    <div className="min-h-screen bg-gradient-to-br from-purple-400 via-pink-500 to-orange-400 py-12 px-4">
+      <div className="max-w-lg mx-auto">
+        {/* Registration Form */}
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2 text-center">
+            MELD JE AAN ALS AMBASSADEUR!
+          </h1>
           
-          {event.description && (
-            <p className="text-lg text-gray-700 mb-6">{event.description}</p>
-          )}
-          
-          {(event.startDate || event.endDate) && (
-            <div className="flex gap-4 text-sm text-gray-600">
-              {event.startDate && (
-                <div>
-                  <span className="font-medium">Start:</span>{' '}
-                  {new Date(event.startDate).toLocaleDateString()}
-                </div>
-              )}
-              {event.endDate && (
-                <div>
-                  <span className="font-medium">End:</span>{' '}
-                  {new Date(event.endDate).toLocaleDateString()}
-                </div>
-              )}
+          <p className="text-sm text-gray-700 mb-6 text-center leading-relaxed">
+            Ga challenges aan, neem je vrienden mee en verzamel de leukste rewards. 
+            Denk aan tickets voor {event.name}, €50 bartegoed en nog veel meer. 
+            Maak jouw Koningsdag compleet als ambassadeur van {event.organization.name}.
+          </p>
+
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+              <p className="text-green-800 font-medium text-center">
+                ✓ Aanmelding succesvol!
+              </p>
+              <p className="text-green-700 text-sm mt-1 text-center">
+                Bedankt voor je aanmelding. We nemen binnenkort contact met je op!
+              </p>
             </div>
           )}
-        </div>
 
-        {/* Registration Form */}
-        <div className="bg-white shadow-lg rounded-lg p-8">
-          {mode === 'choice' ? (
-            <>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                Registreer als Ambassador
-              </h2>
-              <p className="text-gray-600 mb-8">
-                Kies hoe je je wilt aanmelden voor dit evenement
-              </p>
-
-              <div className="space-y-4">
-                <button
-                  onClick={() => setMode('login')}
-                  className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 mb-2">
-                        Inloggen + Aanmelden
-                      </h3>
-                      <p className="text-gray-600 text-sm">
-                        Ik heb al een account en wil me aanmelden voor dit evenement
-                      </p>
-                    </div>
-                    <svg className="w-6 h-6 text-gray-400 group-hover:text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => setMode('register')}
-                  className="w-full p-6 border-2 border-gray-200 rounded-lg hover:border-green-500 hover:bg-green-50 transition-all text-left group"
-                >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-green-600 mb-2">
-                        Account aanmaken + Aanmelden
-                      </h3>
-                      <p className="text-gray-600 text-sm">
-                        Ik ben nieuw en wil een account aanmaken en me aanmelden
-                      </p>
-                    </div>
-                    <svg className="w-6 h-6 text-gray-400 group-hover:text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </div>
-                </button>
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {mode === 'login' ? 'Inloggen + Aanmelden' : 'Account aanmaken + Aanmelden'}
-                </h2>
-                <button
-                  onClick={() => {
-                    setMode('choice')
-                    setError('')
-                    setFormData({ name: '', email: '', password: '' })
-                  }}
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  ← Terug
-                </button>
-              </div>
-
-              <p className="text-gray-600 mb-6">
-                {mode === 'login' 
-                  ? 'Log in met je bestaande account om je aan te melden voor dit evenement.'
-                  : 'Maak een account aan en meld je direct aan voor dit evenement.'
-                }
-              </p>
-
-              {success && (
-                <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md">
-                  <p className="text-green-800 font-medium">
-                    ✓ Aanmelding succesvol!
-                  </p>
-                  <p className="text-green-700 text-sm mt-1">
-                    Bedankt voor je aanmelding. De organisatoren zullen je aanvraag beoordelen.
-                  </p>
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {mode === 'register' && (
-                  <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-                      Volledige Naam
-                    </label>
-                    <input
-                      type="text"
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="block w-full rounded-md border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Jan Jansen"
-                      required
-                    />
-                  </div>
-                )}
-
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Adres
-                  </label>
-                  <input
-                    type="email"
-                    id="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="block w-full rounded-md border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="jan@example.com"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                    Wachtwoord
-                  </label>
-                  <input
-                    type="password"
-                    id="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    className="block w-full rounded-md border border-gray-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="••••••••"
-                    required
-                    minLength={6}
-                  />
-                  {mode === 'register' && (
-                    <p className="text-sm text-gray-500 mt-1">Minimaal 6 karakters</p>
-                  )}
-                </div>
-
-                {error && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-md">
-                    <p className="text-red-800 text-sm">{error}</p>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full bg-blue-600 text-white py-3 px-6 rounded-md text-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                >
-                  {submitting ? 'Bezig...' : mode === 'login' ? 'Inloggen en Aanmelden' : 'Account aanmaken en Aanmelden'}
-                </button>
-              </form>
-            </>
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800 text-sm text-center">{error}</p>
+            </div>
           )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Voornaam */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Voornaam <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Achternaam */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Achternaam <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Geslacht */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Geslacht <span className="text-red-500">*</span>
+              </label>
+              <select
+                required
+                value={formData.gender}
+                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              >
+                <option value="Man">Man</option>
+                <option value="Vrouw">Vrouw</option>
+                <option value="Anders">Anders</option>
+              </select>
+            </div>
+
+            {/* Geboortedatum */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Geboortedatum <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                required
+                value={formData.birthDate}
+                onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Woonplaats */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Woonplaats <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Mobiele telefoonnummer */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Mobiele telefoonnummer <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2">
+                <select className="px-3 py-2 border border-gray-300 rounded-lg bg-gray-50">
+                  <option>+31</option>
+                </select>
+                <input
+                  type="tel"
+                  required
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* E-mail */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                E-mail <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                required
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Instagram */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Instagram <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.instagram}
+                onChange={(e) => setFormData({ ...formData, instagram: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Tiktok */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Tiktok
+              </label>
+              <input
+                type="text"
+                value={formData.tiktok}
+                onChange={(e) => setFormData({ ...formData, tiktok: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              />
+            </div>
+
+            {/* Gebruiksvoorwaarden */}
+            <div className="flex items-start gap-3 py-2">
+              <input
+                type="checkbox"
+                required
+                checked={formData.agreeTerms}
+                onChange={(e) => setFormData({ ...formData, agreeTerms: e.target.checked })}
+                className="mt-1 h-5 w-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+              />
+              <label className="text-sm text-gray-700">
+                Ik ga akkoord met de{' '}
+                <a href="#" className="text-orange-500 underline">gebruiksvoorwaarden</a> en{' '}
+                <a href="#" className="text-orange-500 underline">privacybeleid</a> van Innercrowd.{' '}
+                <span className="text-red-500">*</span>
+              </label>
+            </div>
+
+            {/* Updates */}
+            <div className="flex items-start gap-3 py-2">
+              <input
+                type="checkbox"
+                checked={formData.agreeUpdates}
+                onChange={(e) => setFormData({ ...formData, agreeUpdates: e.target.checked })}
+                className="mt-1 h-5 w-5 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+              />
+              <label className="text-sm text-gray-700">
+                Houd me op de hoogte via WhatsApp en e-mail. We sturen maximaal 1-2 relevante berichten per week.{' '}
+                <span className="text-red-500">*</span>
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={submitting || !formData.agreeTerms}
+              className="w-full bg-gradient-to-r from-orange-400 to-orange-500 text-white font-bold py-3 px-6 rounded-lg hover:from-orange-500 hover:to-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            >
+              {submitting ? 'Bezig met aanmelden...' : 'BEVESTIG AANMELDEN'}
+            </button>
+          </form>
         </div>
       </div>
     </div>
