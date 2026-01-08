@@ -94,11 +94,6 @@ export async function GET(request: NextRequest) {
       },
       orderBy: { createdAt: 'desc' }
     })
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' }
-    })
 
     return NextResponse.json(ambassadorEvents)
   } catch (error) {
