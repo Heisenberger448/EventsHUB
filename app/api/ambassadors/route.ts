@@ -13,9 +13,17 @@ export async function GET(request: NextRequest) {
     
     // If email query param is provided, fetch ambassadors for that email (for mobile app)
     if (email) {
-      const ambassadors = await prisma.ambassador.findMany({
+      const user = await prisma.user.findUnique({
+        where: { email }
+      })
+      
+      if (!user) {
+        return NextResponse.json([])
+      }
+      
+      const ambassadorEvents = await prisma.ambassadorEvent.findMany({
         where: {
-          email: email
+          userId: user.id
         },
         include: {
           event: {
@@ -33,7 +41,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' }
       })
       
-      return NextResponse.json(ambassadors)
+      return NextResponse.json(ambassadorEvents)
     }
     
     // Otherwise, require authentication and fetch for organization
@@ -53,16 +61,24 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch all ambassadors for events belonging to the user's organization
-    const ambassadors = await prisma.ambassador.findMany({
+    // Fetch all ambassador event registrations for events belonging to the user's organization
+    const ambassadorEvents = await prisma.ambassadorEvent.findMany({
       where: {
         event: {
           organizationId: session.user.organizationId
         }
       },
       include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true
+          }
+        },
         event: {
           select: {
+            id: true,
             name: true
           }
         }
@@ -70,7 +86,7 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: 'desc' }
     })
 
-    return NextResponse.json(ambassadors)
+    return NextResponse.json(ambassadorEvents)
   } catch (error) {
     console.error('Error fetching ambassadors:', error)
     return NextResponse.json(

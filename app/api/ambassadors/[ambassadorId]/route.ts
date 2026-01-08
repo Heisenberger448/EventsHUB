@@ -34,8 +34,8 @@ export async function PATCH(
       )
     }
 
-    // Check if ambassador exists and belongs to user's organization
-    const ambassador = await prisma.ambassador.findUnique({
+    // Check if ambassador event registration exists and belongs to user's organization
+    const ambassadorEvent = await prisma.ambassadorEvent.findUnique({
       where: { id: params.ambassadorId },
       include: {
         event: {
@@ -46,26 +46,26 @@ export async function PATCH(
       }
     })
 
-    if (!ambassador) {
+    if (!ambassadorEvent) {
       return NextResponse.json(
-        { error: 'Ambassador not found' },
+        { error: 'Ambassador registration not found' },
         { status: 404 }
       )
     }
 
-    if (ambassador.event.organizationId !== session.user.organizationId) {
+    if (ambassadorEvent.event.organizationId !== session.user.organizationId) {
       return NextResponse.json(
         { error: 'Unauthorized to update this ambassador' },
         { status: 403 }
       )
     }
 
-    const updatedAmbassador = await prisma.ambassador.update({
+    const updatedAmbassadorEvent = await prisma.ambassadorEvent.update({
       where: { id: params.ambassadorId },
       data: { status }
     })
 
-    return NextResponse.json(updatedAmbassador)
+    return NextResponse.json(updatedAmbassadorEvent)
   } catch (error) {
     console.error('Error updating ambassador:', error)
     return NextResponse.json(

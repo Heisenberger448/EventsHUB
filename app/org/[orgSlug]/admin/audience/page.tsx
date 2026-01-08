@@ -6,10 +6,13 @@ import { Search, Filter, Download, CheckCircle, XCircle, Clock } from 'lucide-re
 
 interface Ambassador {
   id: string
-  name: string
-  email: string
   status: 'PENDING' | 'ACCEPTED' | 'REJECTED'
   createdAt: string
+  user: {
+    id: string
+    name: string
+    email: string
+  }
   event: {
     name: string
     id: string
@@ -35,8 +38,8 @@ export default function AudiencePage({ params }: { params: { orgSlug: string } }
     if (searchTerm) {
       filtered = filtered.filter(
         amb =>
-          amb.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          amb.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          amb.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          amb.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
           amb.event.name.toLowerCase().includes(searchTerm.toLowerCase())
       )
     }
@@ -220,8 +223,8 @@ export default function AudiencePage({ params }: { params: { orgSlug: string } }
                     <tr key={ambassador.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{ambassador.name}</div>
-                          <div className="text-sm text-gray-500">{ambassador.email}</div>
+                          <div className="text-sm font-medium text-gray-900">{ambassador.user.name}</div>
+                          <div className="text-sm text-gray-500">{ambassador.user.email}</div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
