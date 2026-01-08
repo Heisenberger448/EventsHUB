@@ -8,9 +8,9 @@ export async function POST(
 ) {
   try {
     const body = await req.json()
-    const { name, email, password, userId } = body
+    const { name, email, password, userId, metadata } = body
 
-    console.log('📝 Register request:', { eventId: params.eventId, userId, email, hasPassword: !!password })
+    console.log('📝 Register request:', { eventId: params.eventId, userId, email, hasPassword: !!password, hasMetadata: !!metadata })
 
     // Check if event exists
     const event = await prisma.event.findUnique({
@@ -132,7 +132,13 @@ export async function POST(
         data: {
           userId: existingUser.id,
           eventId: params.eventId,
-          status: 'PENDING'
+          status: 'PENDING',
+          instagram: metadata?.instagram || null,
+          tiktok: metadata?.tiktok || null,
+          phone: metadata?.phone || null,
+          birthDate: metadata?.birthDate || null,
+          gender: metadata?.gender || null,
+          address: metadata?.address || null
         }
       })
 
@@ -152,12 +158,18 @@ export async function POST(
       }
     })
 
-    // Create event registration
+    // Create event registration with social media data
     const registration = await prisma.ambassadorEvent.create({
       data: {
         userId: newUser.id,
         eventId: params.eventId,
-        status: 'PENDING'
+        status: 'PENDING',
+        instagram: metadata?.instagram || null,
+        tiktok: metadata?.tiktok || null,
+        phone: metadata?.phone || null,
+        birthDate: metadata?.birthDate || null,
+        gender: metadata?.gender || null,
+        address: metadata?.address || null
       }
     })
 

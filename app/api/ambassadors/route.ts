@@ -68,7 +68,16 @@ export async function GET(request: NextRequest) {
           organizationId: session.user.organizationId
         }
       },
-      include: {
+      select: {
+        id: true,
+        status: true,
+        createdAt: true,
+        instagram: true,
+        tiktok: true,
+        phone: true,
+        birthDate: true,
+        gender: true,
+        address: true,
         user: {
           select: {
             id: true,
@@ -80,6 +89,11 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    })
           }
         }
       },
