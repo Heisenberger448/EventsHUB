@@ -9,14 +9,17 @@ RUN apk add --no-cache openssl
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies (this will run postinstall which needs prisma schema)
-RUN npm ci --only=production
+# Install ALL dependencies including dev dependencies (needed for build)
+RUN npm ci
 
 # Copy rest of app files
 COPY . .
 
 # Build Next.js app
 RUN npm run build
+
+# Remove dev dependencies after build
+RUN npm prune --production
 
 # Expose port
 EXPOSE 3000
