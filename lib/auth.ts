@@ -62,6 +62,17 @@ export const authOptions: NextAuthOptions = {
         session.user.organizationSlug = token.organizationSlug as string | undefined
       }
       return session
+    },
+    async redirect({ url, baseUrl }) {
+      // If URL is relative, prepend baseUrl
+      if (url.startsWith('/')) {
+        return `${baseUrl}${url}`
+      }
+      // Allow callback URLs on the same origin
+      if (new URL(url).origin === baseUrl) {
+        return url
+      }
+      return baseUrl
     }
   },
   pages: {

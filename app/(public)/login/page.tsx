@@ -29,20 +29,29 @@ function LoginForm() {
         return
       }
 
-      // Wait a bit for session to be set
+      if (!result?.ok) {
+        setError('Login failed. Please try again.')
+        setLoading(false)
+        return
+      }
+
+      // Wait for session to be set
       await new Promise(resolve => setTimeout(resolve, 500))
 
       // Fetch session to get user info
       const response = await fetch('/api/auth/session')
       const session = await response.json()
 
+      console.log('Session after login:', session)
+
       // Redirect based on user role and organization
       if (session?.user?.role === 'PLATFORM_ADMIN') {
-        window.location.href = '/admin'
+        router.push('/admin')
       } else if (session?.user?.organizationSlug) {
-        window.location.href = `/${session.user.organizationSlug}/dashboard`
+        router.push(`/${session.user.organizationSlug}/dashboard`)
       } else {
-        window.location.href = '/'
+        setError('No organization found for this account')
+        setLoading(false)
       }
     } catch (err) {
       console.error('Login error:', err)
