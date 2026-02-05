@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import OrgLayout from '@/components/org-admin/OrgLayout'
 import StatCard from '@/components/org-admin/StatCard'
 
@@ -15,6 +16,9 @@ interface DashboardStats {
 export default function OrgDashboardPage({ params }: { params: { orgSlug: string } }) {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
+  const { data: session } = useSession()
+
+  const firstName = session?.user?.firstName || session?.user?.email?.split('@')[0] || 'there'
 
   useEffect(() => {
     fetchStats()
@@ -50,7 +54,7 @@ export default function OrgDashboardPage({ params }: { params: { orgSlug: string
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">
-            Welcome, You&rsquo;re logged in!
+            Welcome, {firstName}!
           </h2>
           <p className="text-gray-600 mt-1">
             Here&rsquo;s an overview of your organization
