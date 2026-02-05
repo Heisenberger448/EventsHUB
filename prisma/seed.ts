@@ -59,39 +59,13 @@ async function main() {
   })
   console.log('✅ Created event:', event.name)
 
-  // Create sample ambassadors
-  const ambassadorPassword = await bcrypt.hash('ambassador123', 10)
-  
-  const ambassador1 = await prisma.ambassador.create({
-    data: {
-      name: 'John Doe',
-      email: 'john@example.com',
-      passwordHash: ambassadorPassword,
-      status: 'PENDING',
-      eventId: event.id
-    }
-  })
-  console.log('✅ Created ambassador:', ambassador1.name)
-
-  const ambassador2 = await prisma.ambassador.create({
-    data: {
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      passwordHash: ambassadorPassword,
-      status: 'ACCEPTED',
-      eventId: event.id
-    }
-  })
-  console.log('✅ Created ambassador:', ambassador2.name)
-
   console.log('\n🎉 Seed completed successfully!')
   console.log('\n📝 Test credentials:')
   console.log('Platform Admin: admin@sharedcrowd.com / admin123')
   console.log('Org Admin: admin@acme-corp.com / orgadmin123')
-  console.log('Ambassadors: john@example.com or jane@example.com / ambassador123')
   console.log('\n🔗 URLs:')
   console.log('Platform Admin: http://localhost:3000/admin')
-  console.log('Org Admin: http://localhost:3000/org/acme-corp/admin')
+  console.log('Org Admin: http://localhost:3000/acme-corp/dashboard')
   console.log('Public Event: http://localhost:3000/e/summer-conference-2025')
 }
 
