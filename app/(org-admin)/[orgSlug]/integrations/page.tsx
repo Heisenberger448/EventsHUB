@@ -214,6 +214,40 @@ export default function IntegrationsPage({ params }: IntegrationsPageProps) {
               </div>
             </div>
 
+            {/* WhatsApp Integration */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-start gap-4">
+                {/* WhatsApp Icon/Thumbnail */}
+                <div className="w-12 h-12 bg-[#25D366] rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden p-2">
+                  <svg className="w-full h-full" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M256 20C126.5 20 20 126.5 20 256c0 45.4 13 87.8 35.5 123.8L21 491l115-33.5C171.2 479 211.5 492 256 492c129.5 0 236-106.5 236-236S385.5 20 256 20zm0 424c-39.5 0-76.5-12.2-107-33l-7.5-4.5-63 18.5 18.5-62-5-8C71 324.5 58 291.5 58 256c0-108.5 89.5-198 198-198s198 89.5 198 198-89.5 198-198 198z" fill="white"/>
+                    <path d="M395 298c-3.5-1.8-21-10.5-24.5-11.5-3.5-1-6-1.5-8.5 1.5-2.5 3-10 11.5-12 14-2 2.5-4 3-7.5 1-3.5-2-14.5-5.5-27.5-17-10-9-17-20.5-19-24-2-3.5-.2-5.2 1.5-7 1.5-1.5 3.5-4 5-6 1.5-2 2-3.5 3-6 1-2.5.5-4.5-.5-6-1-1.5-8.5-21-12-28.5-3-7-6-6-8.5-6h-7.5c-2.5 0-6.5 1-10 4.5-3.5 3.5-13 13-13 31.5s13.5 36.5 15.5 39c2 2.5 27.5 43 67 59.5 9.5 4 16.5 6.5 22 8.5 9.5 3 18 2.5 25 1.5 7.5-1 21-8.5 24-17 3-8.5 3-15.5 2-17-1-1.5-3.5-2.5-7-4z" fill="white"/>
+                  </svg>
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">WhatsApp</h3>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">Built by SharedCrowd</p>
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                    Send personalized WhatsApp messages to ambassadors and attendees. Automate event updates, reminders, and engagement campaigns through WhatsApp Business API.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                      Communication
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button className="w-full px-4 py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100 transition-colors">
+                  Coming Soon
+                </button>
+              </div>
+            </div>
+
             {/* Placeholder for more integrations */}
             <div className="bg-white rounded-lg border border-gray-200 border-dashed p-12 text-center flex items-center justify-center">
               <div>
