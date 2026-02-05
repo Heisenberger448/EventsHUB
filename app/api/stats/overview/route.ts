@@ -10,7 +10,29 @@ export async function GET() {
   try {
     const session = await getServerSession(authOptions)
     
-    if (!session?.user?.organizationId) {
+    if (!session?.user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    // Platform admin gets platform-wide stats
+    if (session.user.role === 'PLATFORM_ADMIN') {
+      const [totalOrganizations, totalUsers, totalEvents, totalAmbassadors] = await Promise.all([
+        prisma.organization.count(),
+        prisma.user.count(),
+        prisma.event.count(),
+        prisma.ambassadorEvent.count()
+      ])
+
+      return NextResponse.json({
+        totalOrganizations,
+        totalUsers,
+        totalEvents,
+        totalAmbassadors
+      })
+    }
+
+    // Org admin gets org-specific stats
+    if (!session.user.organizationId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
