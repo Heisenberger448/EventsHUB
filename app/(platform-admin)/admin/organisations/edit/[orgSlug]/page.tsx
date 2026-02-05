@@ -25,7 +25,7 @@ interface Organization {
   }
 }
 
-export default function EditOrganisationPage({ params }: { params: { orgId: string } }) {
+export default function EditOrganisationPage({ params }: { params: { orgSlug: string } }) {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
@@ -41,11 +41,11 @@ export default function EditOrganisationPage({ params }: { params: { orgId: stri
 
   useEffect(() => {
     fetchOrganization()
-  }, [params.orgId])
+  }, [params.orgSlug])
 
   const fetchOrganization = async () => {
     try {
-      const res = await fetch(`/api/organizations/${params.orgId}`)
+      const res = await fetch(`/api/organizations/id/${params.orgSlug}`)
       if (!res.ok) throw new Error('Failed to fetch organization')
       const data = await res.json()
       setOrganization(data)
@@ -69,7 +69,7 @@ export default function EditOrganisationPage({ params }: { params: { orgId: stri
     setError('')
 
     try {
-      const res = await fetch(`/api/organizations/${params.orgId}`, {
+      const res = await fetch(`/api/organizations/id/${params.orgSlug}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -97,7 +97,7 @@ export default function EditOrganisationPage({ params }: { params: { orgId: stri
     setError('')
 
     try {
-      const res = await fetch(`/api/organizations/${params.orgId}`, {
+      const res = await fetch(`/api/organizations/id/${params.orgSlug}`, {
         method: 'DELETE'
       })
 
