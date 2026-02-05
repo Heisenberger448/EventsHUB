@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 // GET single organization
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { orgId: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -19,7 +19,7 @@ export async function GET(
     }
 
     const organization = await prisma.organization.findUnique({
-      where: { id: params.id },
+      where: { id: params.orgId },
       include: {
         users: {
           select: {
@@ -54,7 +54,7 @@ export async function GET(
 // UPDATE organization
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { orgId: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -76,7 +76,7 @@ export async function PUT(
       where: {
         slug,
         NOT: {
-          id: params.id
+          id: params.orgId
         }
       }
     })
@@ -86,7 +86,7 @@ export async function PUT(
     }
 
     const updatedOrganization = await prisma.organization.update({
-      where: { id: params.id },
+      where: { id: params.orgId },
       data: {
         name: organisationName,
         slug,
@@ -105,7 +105,7 @@ export async function PUT(
 // DELETE organization
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { orgId: string } }
 ) {
   try {
     const session = await getServerSession(authOptions)
@@ -116,7 +116,7 @@ export async function DELETE(
 
     // Delete organization (cascade will handle users and events)
     await prisma.organization.delete({
-      where: { id: params.id }
+      where: { id: params.orgId }
     })
 
     return NextResponse.json({ success: true })
