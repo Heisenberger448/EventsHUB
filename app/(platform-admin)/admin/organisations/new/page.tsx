@@ -19,7 +19,7 @@ export default function NewOrganisationPage() {
     phoneNumber: '',
     mailAddress: '',
     // Welcome Message
-    welcomeMessage: 'Welcome to our platform! We\'re excited to have you on board.'
+    welcomeMessage: 'Welcome to our platform! We&apos;re excited to have you on board.'
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
