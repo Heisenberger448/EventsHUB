@@ -30,26 +30,30 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
       name: 'Dashboard',
       href: `/${orgSlug}/dashboard`,
       icon: LayoutDashboard,
-      current: pathname === `/${orgSlug}/dashboard`
+      current: pathname === `/${orgSlug}/dashboard`,
+      group: 'main'
+    },
+    {
+      name: 'Events',
+      href: `/${orgSlug}/events`,
+      icon: Calendar,
+      current: pathname === `/${orgSlug}/events`,
+      group: 'main'
+    },
+    {
+      name: 'Campaigns',
+      href: `/${orgSlug}/campaigns`,
+      icon: Send,
+      current: pathname === `/${orgSlug}/campaigns`,
+      group: 'main'
     },
     {
       name: 'Audience',
       href: `/${orgSlug}/audience`,
       icon: Users,
       current: pathname === `/${orgSlug}/audience`,
-      count: stats?.audienceCount
-    },
-    {
-      name: 'Events',
-      href: `/${orgSlug}/events`,
-      icon: Calendar,
-      current: pathname === `/${orgSlug}/events`
-    },
-    {
-      name: 'Campaigns',
-      href: `/${orgSlug}/campaigns`,
-      icon: Send,
-      current: pathname === `/${orgSlug}/campaigns`
+      count: stats?.audienceCount,
+      group: 'secondary'
     }
   ]
 
@@ -67,7 +71,37 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
 
       {/* Navigation */}
       <nav className="flex-1 px-2 space-y-1">
-        {navigation.map((item) => {
+        {navigation.filter(item => item.group === 'main').map((item) => {
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`
+                group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors
+                ${item.current
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                }
+              `}
+            >
+              <div className="flex items-center gap-3">
+                <Icon className="h-5 w-5" />
+                <span>{item.name}</span>
+              </div>
+              {item.count !== undefined && (
+                <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-200 rounded-full">
+                  {item.count}
+                </span>
+              )}
+            </Link>
+          )
+        })}
+        
+        {/* Divider */}
+        <div className="py-2"></div>
+        
+        {navigation.filter(item => item.group === 'secondary').map((item) => {
           const Icon = item.icon
           return (
             <Link
