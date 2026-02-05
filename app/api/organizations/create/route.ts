@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendWelcomeEmail } from '@/lib/email'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 
@@ -117,29 +118,16 @@ export async function POST(request: Request) {
     const passwordSetupUrl = `${process.env.NEXTAUTH_URL}/setup-password?token=${resetToken}`
     
     try {
-      // TODO: Integrate with your email service (SendGrid, Resend, etc.)
-      // For now, we'll just log it
-      console.log('=== WELCOME EMAIL ===')
-      console.log('To:', mailAddress)
-      console.log('Subject: Welcome to the Platform!')
-      console.log('Message:', welcomeMessage)
-      console.log('Password Setup URL:', passwordSetupUrl)
-      console.log('====================')
-
-      // If you have an email service, call it here:
-      // await sendEmail({
-      //   to: mailAddress,
-      //   subject: 'Welcome to the Platform!',
-      //   html: `
-      //     <h1>Welcome ${firstName}!</h1>
-      //     <p>${welcomeMessage}</p>
-      //     <p>Click the link below to set up your password:</p>
-      //     <a href="${passwordSetupUrl}">Set Up Password</a>
-      //     <p>This link will expire in 24 hours.</p>
-      //   `
-      // })
+      await sendWelcomeEmail({
+        to: mailAddress,
+        firstName,
+        welcomeMessage,
+        passwordSetupUrl
+      })
+      
+      console.log('✅ Welcome email sent to:', mailAddress)
     } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError)
+      console.error('❌ Failed to send welcome email:', emailError)
       // Don't fail the request if email fails
     }
 
