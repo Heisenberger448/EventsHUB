@@ -325,7 +325,7 @@ export default function EventPage({ params }: { params: { eventSlug: string } })
               <label className="text-sm text-gray-700">
                 Ik ga akkoord met de{' '}
                 <a href="#" className="text-orange-500 underline">gebruiksvoorwaarden</a> en{' '}
-                <a href="#" className="text-orange-500 underline">privacybeleid</a> van Innercrowd.{' '}
+                <a href="#" className="text-orange-500 underline">privacybeleid</a> van SharedCrowd.{' '}
                 <span className="text-red-500">*</span>
               </label>
             </div>

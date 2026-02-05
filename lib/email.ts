@@ -16,9 +16,9 @@ export async function sendWelcomeEmail({
     const resend = new Resend(process.env.RESEND_API_KEY)
     
     const { data, error } = await resend.emails.send({
-      from: 'InnerCrowd <onboarding@resend.dev>', // Resend sandbox domain
+      from: 'SharedCrowd <onboarding@resend.dev>', // Resend sandbox domain
       to: [to],
-      subject: 'Welkom bij InnerCrowd - Stel je wachtwoord in',
+      subject: 'Welkom bij SharedCrowd - Stel je wachtwoord in',
       html: `
         <!DOCTYPE html>
         <html>
@@ -76,7 +76,7 @@ export async function sendWelcomeEmail({
           </head>
           <body>
             <div class="header">
-              <h1>Welkom bij InnerCrowd!</h1>
+              <h1>Welkom bij SharedCrowd!</h1>
             </div>
             <div class="content">
               <h2>Hallo ${firstName},</h2>

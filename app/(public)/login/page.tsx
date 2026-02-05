@@ -69,7 +69,7 @@ function LoginForm() {
         <div className="w-full max-w-md">
           {/* Logo */}
           <div className="mb-12">
-            <h1 className="text-4xl font-bold text-gray-900">InnerCrowd</h1>
+            <h1 className="text-4xl font-bold text-gray-900">SharedCrowd</h1>
           </div>
 
           {/* Welcome back */}
@@ -148,7 +148,7 @@ function LoginForm() {
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 items-center justify-center p-12">
         <div className="max-w-xl text-white">
           <h2 className="text-4xl font-bold mb-6">
-            Welkom bij InnerCrowd
+            Welkom bij SharedCrowd
           </h2>
           <p className="text-xl text-white/90 mb-8 leading-relaxed">
             Het platform waar organisaties en ambassadeurs samenkomen om geweldige evenementen te creëren en te delen.

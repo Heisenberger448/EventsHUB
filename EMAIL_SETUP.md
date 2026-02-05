@@ -11,7 +11,7 @@
 1. Log in op je Resend dashboard
 2. Ga naar "API Keys" in het menu
 3. Klik op "Create API Key"
-4. Geef de key een naam (bijv. "InnerCrowd Production")
+4. Geef de key een naam (bijv. "SharedCrowd Production")
 5. Kopieer de API key (deze zie je maar één keer!)
 
 ## Stap 3: Environment Variable Instellen
@@ -56,7 +56,7 @@ Wanneer je klaar bent voor productie met je eigen domein:
 
 1. Ga naar "Domains" in Resend dashboard
 2. Klik op "Add Domain"
-3. Voer je domein in (bijv. `innercrowd.nl`)
+3. Voer je domein in (bijv. `sharedcrowd.nl`)
 4. Voeg de DNS records toe bij je domain provider:
    - SPF record
    - DKIM records
@@ -64,7 +64,7 @@ Wanneer je klaar bent voor productie met je eigen domein:
 5. Verifieer het domein in Resend
 6. Update `lib/email.ts` regel 12:
    ```typescript
-   from: 'InnerCrowd <noreply@innercrowd.nl>',
+   from: 'SharedCrowd <noreply@sharedcrowd.nl>',
    ```
 
 ## Email Templates
