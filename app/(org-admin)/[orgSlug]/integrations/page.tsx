@@ -181,6 +181,39 @@ export default function IntegrationsPage({ params }: IntegrationsPageProps) {
               </div>
             </div>
 
+            {/* Klaviyo Integration */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-start gap-4">
+                {/* Klaviyo Icon/Thumbnail */}
+                <div className="w-12 h-12 bg-[#2C2C2C] rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden p-1.5">
+                  <svg className="w-full h-full" viewBox="0 0 400 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M80 100 L320 100 L320 250 L240 250 L200 200 L200 250 L80 250 Z" fill="#F5F5F0"/>
+                  </svg>
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">Klaviyo</h3>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">Built by SharedCrowd</p>
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                    Sync your audience data with Klaviyo to create targeted email and SMS campaigns. Automatically segment attendees and ambassadors for personalized marketing automation.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                      Communication
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button className="w-full px-4 py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100 transition-colors">
+                  Coming Soon
+                </button>
+              </div>
+            </div>
+
             {/* Placeholder for more integrations */}
             <div className="bg-white rounded-lg border border-gray-200 border-dashed p-12 text-center flex items-center justify-center">
               <div>
