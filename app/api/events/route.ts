@@ -7,8 +7,6 @@ export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
 
-    console.log('Session in POST /api/events:', JSON.stringify(session, null, 2))
-
     if (!session?.user || !['ORG_ADMIN', 'ORG_USER'].includes(session.user.role)) {
       return NextResponse.json(
         { error: 'Unauthorized' },

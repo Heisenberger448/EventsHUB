@@ -68,7 +68,6 @@ model Event {
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   ambassadorEvents AmbassadorEvent[]
   campaigns      Campaign[]
-  oldAmbassadors Ambassador[]      @relation("EventToOldAmbassador")
   
   @@index([organizationId])
   @@index([slug])
@@ -128,22 +127,4 @@ model AmbassadorEvent {
   @@index([userId])
   @@index([eventId])
   @@index([status])
-}
-
-// DEPRECATED: Old Ambassador model - will be removed after migration
-// DEPRECATED: Old Ambassador model - will be removed after migration
-model Ambassador {
-  id           String            @id @default(cuid())
-  eventId      String
-  name         String
-  email        String
-  passwordHash String?
-  status       AmbassadorStatus  @default(PENDING)
-  createdAt    DateTime          @default(now())
-  
-  event        Event             @relation("EventToOldAmbassador", fields: [eventId], references: [id], onDelete: Cascade)
-  
-  @@index([eventId])
-  @@index([status])
-  @@index([email])
 }

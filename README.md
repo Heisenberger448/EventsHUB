@@ -9,90 +9,69 @@ A full-stack TypeScript application built with Next.js 14+ for managing events a
 - **Styling**: Tailwind CSS
 - **Database**: PostgreSQL
 - **ORM**: Prisma
-- **Authentication**: NextAuth.js (Auth.js)
+- **Authentication**: NextAuth.js
 - **Password Hashing**: bcryptjs
 
 ## Features
 
-### User Roles
+- Multi-tenant architecture with organization isolation
+- Platform admins manage organizations
+- Organization admins create and manage events
+- Ambassador registration and management
+- Campaign system for ambassador tasks
+- Feed system for discovering new events
+
+## User Roles
 
 1. **PLATFORM_ADMIN**: Manages organizations at `/admin`
-2. **ORG_ADMIN / ORG_USER**: Manages events and ambassadors at `/org/[orgSlug]/admin`
-3. **Ambassadors**: Public registration (no login required) at `/e/[eventSlug]`
-
-### Core Functionality
-
-- Platform admins can create and manage organizations
-- Organization admins can create events
-- Public event pages for ambassador registration
-- Ambassador management (accept/reject registrations)
-- Multi-tenant architecture with organization isolation
+2. **ORG_ADMIN / ORG_USER**: Manages events and ambassadors at `/{orgSlug}/dashboard`
+3. **Ambassadors**: Mobile app access for events and campaigns
 
 ## Project Structure
 
 ```
 ├── app/
-│   ├── api/
-│   │   ├── auth/[...nextauth]/route.ts    # NextAuth configuration
-│   │   ├── organizations/route.ts          # Organization CRUD
-│   │   ├── events/
-│   │   │   ├── route.ts                   # Event CRUD
-│   │   │   ├── slug/[eventSlug]/route.ts  # Get event by slug
-│   │   │   └── [eventId]/register/route.ts # Ambassador registration
-│   │   └── ambassadors/
-│   │       ├── route.ts                   # List ambassadors
-│   │       └── [ambassadorId]/route.ts    # Update ambassador status
-│   ├── admin/page.tsx                     # Platform admin dashboard
-│   ├── org/[orgSlug]/admin/page.tsx       # Organization admin dashboard
-│   ├── e/[eventSlug]/page.tsx             # Public event page
-│   ├── login/page.tsx                     # Login page
-│   ├── page.tsx                           # Home page
-│   ├── layout.tsx                         # Root layout
-│   ├── providers.tsx                      # NextAuth SessionProvider
-│   └── globals.css                        # Global styles
-├── lib/
-│   ├── auth.ts                            # NextAuth configuration
-│   └── prisma.ts                          # Prisma client
-├── prisma/
-│   ├── schema.prisma                      # Database schema
-│   └── seed.ts                            # Database seeding script
-├── types/
-│   └── next-auth.d.ts                     # NextAuth type definitions
-├── middleware.ts                          # Route protection
-├── .env.example                           # Environment variables template
-├── package.json
-├── tsconfig.json
-├── tailwind.config.ts
-└── next.config.js
+│   ├── (platform-admin)/      # Platform admin interface
+│   │   └── admin/             # Platform admin dashboard
+│   ├── (org-admin)/           # Organization admin interface
+│   │   └── [orgSlug]/         # Org-specific admin pages
+│   │       ├── dashboard/     # Organization dashboard
+│   │       ├── audience/      # Ambassador management
+│   │       ├── events/        # Event management
+│   │       └── campaigns/     # Campaign management
+│   ├── (public)/              # Public pages
+│   │   ├── e/[eventSlug]/     # Public event pages
+│   │   └── login/             # Authentication
+│   └── api/                   # API routes
+├── components/
+│   ├── org-admin/             # Org admin UI components
+│   ├── platform-admin/        # Platform admin components
+│   └── shared/                # Shared reusable components
+├── lib/                       # Utilities (auth, prisma)
+├── prisma/                    # Database schema and migrations
+└── types/                     # TypeScript type definitions
 ```
 
-## Setup Instructions
+The project uses Next.js route groups `()` to organize pages by user interface type without affecting the URL structure.
 
-### 1. Install Dependencies
+## URL Structure
 
-```bash
-npm install
-```
+- **Platform Admin**: `/admin`
+- **Organization Admin**: `/[orgSlug]/dashboard`, `/[orgSlug]/audience`, etc.
+- **Public Events**: `/e/[eventSlug]`
+- **Login**: `/login`
 
-### 2. Setup Database
-
-Make sure you have PostgreSQL installed and running.
+## Environment Setup
 
 Create a `.env` file in the root directory:
 
-```bash
-cp .env.example .env
-```
-
-Update the `.env` file with your database credentials:
-
 ```env
-DATABASE_URL="postgresql://user:password@localhost:5432/sharedcrowd?schema=public"
+DATABASE_URL="postgresql://user:password@host:5432/database?schema=public"
 NEXTAUTH_URL="http://localhost:3000"
-NEXTAUTH_SECRET="your-secret-key-change-this-in-production"
+NEXTAUTH_SECRET="your-secret-key-here"
 ```
 
-To generate a secure secret for `NEXTAUTH_SECRET`:
+Generate a secure `NEXTAUTH_SECRET`:
 
 ```bash
 openssl rand -base64 32
@@ -136,122 +115,71 @@ This creates:
 ### 5. Run Development Server
 
 ```bash
-npm run dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Test Credentials
-
-### Platform Admin
-- **Email**: admin@sharedcrowd.com
-- **Password**: admin123
-- **URL**: http://localhost:3000/admin
-
-### Organization Admin
-- **Email**: admin@acme-corp.com
-- **Password**: orgadmin123
-- **URL**: http://localhost:3000/org/acme-corp/admin
-
-### Public Event Page
-- **URL**: http://localhost:3000/e/summer-conference-2025
-
-## API Routes
-
-### Organizations (Platform Admin Only)
-
-- `POST /api/organizations` - Create organization
-- `GET /api/organizations` - List organizations
-
-### Events (Org Admin/User Only)
-
-- `POST /api/events` - Create event
-- `GET /api/events` - List events for user's organization
-- `GET /api/events/slug/[eventSlug]` - Get event by slug (public)
-
-### Ambassadors
-
-- `POST /api/events/[eventId]/register` - Register ambassador (public)
-- `GET /api/ambassadors` - List ambassadors (org admin/user)
-- `PATCH /api/ambassadors/[ambassadorId]` - Update ambassador status (org admin/user)
-
-## Database Schema
-
-### Organization
-- id, name, slug, createdAt
-
-### User
-- id, email, passwordHash, role, organizationId, createdAt
-- Roles: PLATFORM_ADMIN, ORG_ADMIN, ORG_USER
-
-### Event
-- id, organizationId, name, slug, description, startDate, endDate, createdAt
-
-### Ambassador
-- id, eventId, name, email, status, createdAt
-- Status: PENDING, ACCEPTED, REJECTED
-
-## Additional Commands
+## Database Commands
 
 ```bash
+# Generate Prisma Client
+npm run db:generate
+
+# Run migrations
+npm run db:migrate:deploy
+
+# Seed database
+npm run db:seed
+
 # View database in Prisma Studio
 npm run db:studio
+```
 
-# Run linter
-npm run lint
+## Development
+
+```bash
+# Start development server
+npm run dev
 
 # Build for production
 npm run build
 
 # Start production server
 npm run start
+
+# Run linter
+npm run lint
 ```
 
-## Security Notes
+## API Routes
 
-⚠️ **This is an MVP scaffold - not production-ready!**
+### Organizations (Platform Admin Only)
+- `POST /api/organizations` - Create organization
+- `GET /api/organizations` - List organizations
 
-For production deployment, consider:
-- Use strong, unique `NEXTAUTH_SECRET`
-- Enable HTTPS
-- Implement rate limiting
-- Add input validation and sanitization
-- Implement proper error handling
-- Add email verification
-- Use environment-specific configurations
-- Implement CSRF protection
-- Add database connection pooling
-- Set up proper logging and monitoring
+### Events (Org Admin/User)
+- `POST /api/events` - Create event
+- `GET /api/events` - List events
+- `GET /api/events/slug/[eventSlug]` - Get event by slug
 
-## Next Steps
+### Ambassadors
+- `POST /api/ambassadors/login` - Ambassador login
+- `GET /api/ambassadors` - List ambassadors
+- `PATCH /api/ambassadors/[ambassadorId]` - Update status
 
-To extend this MVP:
-1. Add email notifications (welcome emails, ambassador status updates)
-2. Implement file uploads (event images, ambassador profiles)
-3. Add event analytics dashboard
-4. Implement ambassador tracking codes/links
-5. Add multi-language support
-6. Implement event capacity limits
-7. Add ambassador rewards/gamification
-8. Create mobile-responsive designs
-9. Add social media integration
-10. Implement event check-in system
+### Campaigns
+- `GET /api/ambassadors/[id]/campaigns` - Get ambassador campaigns
+- `POST /api/campaigns/[id]/complete` - Mark campaign complete
 
 ## Troubleshooting
 
-### Database Connection Issues
+**Database Connection Issues**
 - Ensure PostgreSQL is running
-- Check DATABASE_URL in .env
-- Verify database credentials
+- Check DATABASE_URL in `.env`
 
-### Authentication Issues
-- Clear browser cookies/local storage
-- Check NEXTAUTH_URL matches your app URL
-- Regenerate NEXTAUTH_SECRET
+**Authentication Issues**
+- Clear browser cookies
+- Verify NEXTAUTH_URL matches your app URL
 
-### Build Errors
+**Build Errors**
 - Delete `.next` folder and rebuild
-- Clear node_modules and reinstall: `rm -rf node_modules package-lock.json && npm install`
 - Run `npm run db:generate` after schema changes
 
 ## License

@@ -15,8 +15,6 @@ export async function GET(
       select: { id: true, email: true }
     })
 
-    console.log('User found:', user)
-
     if (!user) {
       return NextResponse.json(
         { error: 'User niet gevonden' },
@@ -33,10 +31,7 @@ export async function GET(
       select: { eventId: true }
     })
 
-    console.log('Accepted events:', acceptedEvents)
-
     const eventIds = acceptedEvents.map(ae => ae.eventId)
-    console.log('Event IDs:', eventIds)
 
     // Get all ACTIVE campaigns for these events (no date filter - show all active campaigns)
     const campaigns = await prisma.campaign.findMany({

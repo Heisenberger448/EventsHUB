@@ -6,8 +6,6 @@ export async function POST(req: NextRequest) {
   try {
     const { email, password } = await req.json()
 
-    console.log('Ambassador login attempt:', email)
-
     if (!email || !password) {
       return NextResponse.json(
         { error: 'Email and password are required' },
@@ -15,7 +13,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Find user by email
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -34,21 +31,14 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    console.log('User found:', user ? 'yes' : 'no')
-    console.log('Has password:', user?.passwordHash ? 'yes' : 'no')
-
     if (!user || !user.passwordHash) {
-      console.log('Login failed: No user or no password')
       return NextResponse.json(
         { error: 'Invalid credentials' },
         { status: 401 }
       )
     }
 
-    // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.passwordHash)
-
-    console.log('Password valid:', isPasswordValid)
 
     if (!isPasswordValid) {
       return NextResponse.json(
@@ -57,7 +47,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Return user info with all ambassador events
     return NextResponse.json({
       user: {
         id: user.id,
