@@ -9,7 +9,9 @@ import {
   Calendar,
   Link as LinkIcon,
   ChevronDown,
-  LogOut
+  LogOut,
+  FileText,
+  BarChart3
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -53,6 +55,20 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
       icon: Users,
       current: pathname === `/${orgSlug}/audience`,
       count: stats?.audienceCount,
+      group: 'secondary'
+    },
+    {
+      name: 'Content',
+      href: `/${orgSlug}/content`,
+      icon: FileText,
+      current: pathname === `/${orgSlug}/content`,
+      group: 'secondary'
+    },
+    {
+      name: 'Analytics',
+      href: `/${orgSlug}/analytics`,
+      icon: BarChart3,
+      current: pathname === `/${orgSlug}/analytics`,
       group: 'secondary'
     }
   ]
