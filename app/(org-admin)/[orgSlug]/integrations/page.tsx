@@ -76,6 +76,39 @@ export default function IntegrationsPage({ params }: IntegrationsPageProps) {
               </div>
             </div>
 
+            {/* Your ticket provider Integration */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-start gap-4">
+                {/* Your ticket provider Icon/Thumbnail */}
+                <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-200">
+                  <svg className="w-8 h-8" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 10 L90 75 L10 75 Z" fill="#3EADD4"/>
+                  </svg>
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">Your ticket provider</h3>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">Built by SharedCrowd</p>
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                    Import Eventix ticket orders and attendee data into SharedCrowd to track ticket sales and trigger personalized campaigns.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                      Tickets
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button className="w-full px-4 py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100 transition-colors">
+                  Coming Soon
+                </button>
+              </div>
+            </div>
+
             {/* Placeholder for more integrations */}
             <div className="bg-white rounded-lg border border-gray-200 border-dashed p-12 text-center flex items-center justify-center">
               <div>
