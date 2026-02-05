@@ -80,8 +80,8 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
 
   return (
     <div className="flex h-screen w-56 flex-col bg-white border-r border-gray-200">
-      {/* Logo - moved down slightly */}
-      <div className="px-4 py-6 mt-8">
+      {/* Logo */}
+      <div className="px-4 py-6">
         <h1 className="text-2xl font-bold text-gray-900">SharedCrowd</h1>
       </div>
 
