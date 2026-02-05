@@ -2,15 +2,18 @@ FROM node:18-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
+
+# Copy package files and prisma schema
 COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install dependencies (this will run postinstall which needs prisma schema)
 RUN npm ci --only=production
 
-# Copy app files
+# Copy rest of app files
 COPY . .
-
-# Generate Prisma Client
-RUN npx prisma generate
 
 # Build Next.js app
 RUN npm run build
