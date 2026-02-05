@@ -65,7 +65,7 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
     : session?.user?.email?.charAt(0).toUpperCase() || 'U'
 
   return (
-    <div className="flex h-screen w-48 flex-col bg-white border-r border-gray-200">
+    <div className="flex h-screen w-56 flex-col bg-white border-r border-gray-200">
       {/* Logo */}
       <div className="px-4 py-6">
         <h1 className="text-2xl font-bold text-gray-900">SharedCrowd</h1>
