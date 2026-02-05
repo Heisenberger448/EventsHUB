@@ -71,17 +71,25 @@ export default function OrganisationsPage() {
                 organizations.map((org) => (
                   <div key={org.id} className="px-6 py-4 hover:bg-gray-50">
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1">
                         <h3 className="text-lg font-medium text-gray-900">{org.name}</h3>
                         <p className="text-sm text-gray-500">Slug: {org.slug}</p>
                         <p className="text-sm text-gray-500">
                           {org._count?.users || 0} users · {org._count?.events || 0} events
                         </p>
                       </div>
-                      <div>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => router.push(`/admin/organisations/${org.id}`)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                        >
+                          Edit
+                        </button>
                         <a
                           href={`/${org.slug}/dashboard`}
-                          className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-gray-600 hover:text-gray-800 text-sm font-medium"
                         >
                           View →
                         </a>

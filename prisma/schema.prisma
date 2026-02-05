@@ -55,7 +55,7 @@ model User {
   resetTokenExpiry  DateTime?
   createdAt         DateTime            @default(now())
   
-  organization      Organization?       @relation(fields: [organizationId], references: [id])
+  organization      Organization?       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   ambassadorEvents  AmbassadorEvent[]
   campaignCompletions AmbassadorCampaign[]
   
