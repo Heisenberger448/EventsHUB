@@ -48,42 +48,69 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'An organization with this name already exists' }, { status: 400 })
     }
 
-    // Check if email already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email: mailAddress }
-    })
-
-    if (existingUser) {
-      return NextResponse.json({ error: 'A user with this email already exists' }, { status: 400 })
-    }
-
     // Generate password reset token
     const resetToken = crypto.randomBytes(32).toString('hex')
     const resetTokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
-    // Create organization with contact person
-    const organization = await prisma.organization.create({
-      data: {
-        name: organisationName,
-        slug,
-        kvkNumber,
-        companyAddress,
-        users: {
-          create: {
-            email: mailAddress,
-            passwordHash: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), // Temporary password
-            role: 'ORG_ADMIN',
-            firstName,
-            lastName,
-            phoneNumber,
-            resetToken,
-            resetTokenExpiry
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email: mailAddress }
+    })
+
+    let organization
+
+    if (existingUser) {
+      // User exists - create organization and link existing user to it
+      organization = await prisma.organization.create({
+        data: {
+          name: organisationName,
+          slug,
+          kvkNumber,
+          companyAddress,
+        }
+      })
+
+      // Update existing user with new organization and admin role
+      await prisma.user.update({
+        where: { email: mailAddress },
+        data: {
+          organizationId: organization.id,
+          role: 'ORG_ADMIN',
+          firstName,
+          lastName,
+          phoneNumber,
+          resetToken,
+          resetTokenExpiry
+        }
+      })
+    } else {
+      // User doesn't exist - create organization with new user
+      organization = await prisma.organization.create({
+        data: {
+          name: organisationName,
+          slug,
+          kvkNumber,
+          companyAddress,
+          users: {
+            create: {
+              email: mailAddress,
+              passwordHash: await bcrypt.hash(crypto.randomBytes(32).toString('hex'), 10), // Temporary password
+              role: 'ORG_ADMIN',
+              firstName,
+              lastName,
+              phoneNumber,
+              resetToken,
+              resetTokenExpiry
+            }
           }
         }
-      },
-      include: {
-        users: true
-      }
+      })
+    }
+
+    // Fetch organization with users for response
+    const organizationWithUsers = await prisma.organization.findUnique({
+      where: { id: organization.id },
+      include: { users: true }
     })
 
     // Send welcome email with password setup link
@@ -118,7 +145,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      organization,
+      organization: organizationWithUsers,
       passwordSetupUrl // Return for testing purposes
     })
   } catch (error) {
