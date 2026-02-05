@@ -50,12 +50,6 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
       href: `/${orgSlug}/campaigns`,
       icon: Send,
       current: pathname === `/${orgSlug}/campaigns`
-    },
-    {
-      name: 'Integrations',
-      href: `/${orgSlug}/integrations`,
-      icon: LinkIcon,
-      current: pathname === `/${orgSlug}/integrations`
     }
   ]
 
@@ -100,6 +94,23 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
           )
         })}
       </nav>
+
+      {/* Integrations - above user section */}
+      <div className="px-2 pb-2">
+        <Link
+          href={`/${orgSlug}/integrations`}
+          className={`
+            flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+            ${pathname === `/${orgSlug}/integrations`
+              ? 'bg-gray-100 text-gray-900'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }
+          `}
+        >
+          <LinkIcon className="h-5 w-5" />
+          <span>Integrations</span>
+        </Link>
+      </div>
 
       {/* User section at bottom */}
       <div className="border-t border-gray-200 p-3">
