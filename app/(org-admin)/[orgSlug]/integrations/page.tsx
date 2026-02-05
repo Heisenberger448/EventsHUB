@@ -147,6 +147,40 @@ export default function IntegrationsPage({ params }: IntegrationsPageProps) {
               </div>
             </div>
 
+            {/* Fourvenues Integration */}
+            <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-start gap-4">
+                {/* Fourvenues Icon/Thumbnail */}
+                <div className="w-12 h-12 bg-[#1A1F3A] rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                  <svg className="w-10 h-10" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M30 20 L30 50 L50 50 L50 35 L65 35 L65 20 Z" fill="white"/>
+                    <path d="M50 45 L35 80 L50 80 L50 60 L65 60 L80 80 L95 80 L65 45 Z" fill="white"/>
+                  </svg>
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">Fourvenues</h3>
+                  </div>
+                  <p className="text-xs text-gray-500 mb-3">Built by SharedCrowd</p>
+                  <p className="text-sm text-gray-600 mb-4 line-clamp-3">
+                    Import Eventix ticket orders and attendee data into SharedCrowd to track ticket sales and trigger personalized campaigns.
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                      Tickets
+                    </span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <button className="w-full px-4 py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100 transition-colors">
+                  Coming Soon
+                </button>
+              </div>
+            </div>
+
             {/* Placeholder for more integrations */}
             <div className="bg-white rounded-lg border border-gray-200 border-dashed p-12 text-center flex items-center justify-center">
               <div>
