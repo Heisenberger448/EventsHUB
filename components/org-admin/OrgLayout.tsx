@@ -4,7 +4,6 @@ import { ReactNode, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Sidebar from './Sidebar'
-import Header from './Header'
 
 interface OrgLayoutProps {
   children: ReactNode
@@ -60,9 +59,8 @@ export default function OrgLayout({ children, orgSlug, organizationName }: OrgLa
 
   return (
     <div className="flex h-screen overflow-hidden bg-white">
-      <Sidebar orgSlug={orgSlug} stats={stats} />
+      <Sidebar orgSlug={orgSlug} organizationName={organizationName} stats={stats} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header organizationName={organizationName} />
         <main className="flex-1 overflow-y-auto bg-gray-50">
           {children}
         </main>
