@@ -186,7 +186,7 @@ export default function NewOrganisationPage() {
                 required
               />
               <p className="mt-1 text-sm text-gray-500">
-                This message will be sent to the contact person's email along with a link to set their password.
+                This message will be sent to the contact person&apos;s email along with a link to set their password.
               </p>
             </div>
           </div>
