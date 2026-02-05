@@ -54,13 +54,17 @@ export async function sendWelcomeEmail({
               }
               .button {
                 display: inline-block;
-                background: #667eea;
-                color: white;
-                padding: 12px 30px;
+                background: #4f46e5;
+                color: white !important;
+                padding: 14px 32px;
                 text-decoration: none;
                 border-radius: 6px;
                 font-weight: 600;
                 margin: 20px 0;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+              }
+              .button:hover {
+                background: #4338ca;
               }
               .footer {
                 text-align: center;
