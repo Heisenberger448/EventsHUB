@@ -12,6 +12,12 @@ export default function Header({ organizationName }: HeaderProps) {
 
   // Safe fallback for organizationName
   const safeName = organizationName || 'Organization'
+  
+  // Get user's first name or fallback to email
+  const userDisplayName = session?.user?.firstName || session?.user?.email?.split('@')[0] || 'User'
+  const userInitials = session?.user?.firstName 
+    ? session.user.firstName.charAt(0).toUpperCase() 
+    : session?.user?.email?.charAt(0).toUpperCase() || 'U'
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
@@ -37,9 +43,9 @@ export default function Header({ organizationName }: HeaderProps) {
               className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
               <div className="w-8 h-8 bg-pink-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
-                {session?.user?.email?.charAt(0).toUpperCase()}
+                {userInitials}
               </div>
-              <span className="hidden md:block">{safeName}</span>
+              <span className="hidden md:block">{userDisplayName}</span>
               <ChevronDown className="h-4 w-4" />
             </button>
 
