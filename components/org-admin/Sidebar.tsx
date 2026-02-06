@@ -13,11 +13,7 @@ import {
   FileText,
   BarChart3,
   Gift,
-  TrendingUp,
-  ChevronRight,
-  UserCheck,
-  UserPlus,
-  List
+  TrendingUp
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -92,40 +88,45 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-2 space-y-1">
-        {navigation.filter(item => item.group === 'main').map((item) => {
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`
-                group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
-                ${item.current
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }
-              `}
-            >
-              <div className="flex items-center gap-3">
+      <nav className="flex-1 px-2 overflow-y-auto">
+        <div className="space-y-0.5">
+          {navigation.filter(item => item.group === 'main').map((item) => {
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`
+                  flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  ${item.current
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
                 <Icon className="h-5 w-5" />
                 <span>{item.name}</span>
-              </div>
-            </Link>
-          )
-        })}
+              </Link>
+            )
+          })}
+        </div>
         
         {/* Divider */}
-        <div className="py-2"></div>
+        <div className="my-3 border-t border-gray-100"></div>
         
         {/* Audience Dropdown */}
-        <div>
+        <div className="space-y-0.5">
           <button
-            onClick={() => setAudienceOpen(!audienceOpen)}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setAudienceOpen(!audienceOpen)
+            }}
             className={`
-              w-full group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors
-              ${pathname.includes(`/${orgSlug}/audience`) || pathname.includes(`/${orgSlug}/ambassadors`) || pathname.includes(`/${orgSlug}/requests`) || pathname.includes(`/${orgSlug}/lists`)
-                ? 'bg-gray-100 text-gray-900'
+              w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer
+              ${pathname.startsWith(`/${orgSlug}/ambassadors`) || pathname.startsWith(`/${orgSlug}/requests`) || pathname.startsWith(`/${orgSlug}/lists`)
+                ? 'text-gray-900'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }
             `}
@@ -134,75 +135,72 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
               <Users className="h-5 w-5" />
               <span>Audience</span>
             </div>
-            <ChevronRight className={`h-4 w-4 transition-transform ${audienceOpen ? 'rotate-90' : ''}`} />
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${audienceOpen ? '' : '-rotate-90'}`} />
           </button>
           
           {audienceOpen && (
-            <div className="ml-4 mt-1 space-y-1">
+            <div className="space-y-0.5">
               <Link
                 href={`/${orgSlug}/requests`}
                 className={`
-                  flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  flex items-center gap-3 ml-5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors
                   ${pathname === `/${orgSlug}/requests`
                     ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                   }
                 `}
               >
-                <UserPlus className="h-4 w-4" />
                 <span>Requests</span>
               </Link>
               <Link
                 href={`/${orgSlug}/ambassadors`}
                 className={`
-                  flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  flex items-center gap-3 ml-5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors
                   ${pathname === `/${orgSlug}/ambassadors`
                     ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                   }
                 `}
               >
-                <UserCheck className="h-4 w-4" />
                 <span>Ambassadors</span>
               </Link>
               <Link
                 href={`/${orgSlug}/lists`}
                 className={`
-                  flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  flex items-center gap-3 ml-5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors
                   ${pathname === `/${orgSlug}/lists`
                     ? 'bg-gray-100 text-gray-900'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
                   }
                 `}
               >
-                <List className="h-4 w-4" />
                 <span>Lists & segments</span>
               </Link>
             </div>
           )}
         </div>
         
-        {navigation.filter(item => item.group === 'secondary').map((item) => {
-          const Icon = item.icon
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`
-                group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
-                ${item.current
-                  ? 'bg-gray-100 text-gray-900'
-                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }
-              `}
-            >
-              <div className="flex items-center gap-3">
+        <div className="space-y-0.5 mt-0.5">
+          {navigation.filter(item => item.group === 'secondary').map((item) => {
+            const Icon = item.icon
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`
+                  flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  ${item.current
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
                 <Icon className="h-5 w-5" />
                 <span>{item.name}</span>
-              </div>
-            </Link>
-          )
-        })}
+              </Link>
+            )
+          })}
+        </div>
       </nav>
 
       {/* Grow section */}
