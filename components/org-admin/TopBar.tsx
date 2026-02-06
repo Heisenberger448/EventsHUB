@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Search, Bell, HelpCircle, BookOpen, Rocket } from 'lucide-react'
 
-export default function TopBar() {
+export default function TopBar({ onOpenOnboarding }: { onOpenOnboarding?: () => void }) {
   const [supportOpen, setSupportOpen] = useState(false)
   const supportRef = useRef<HTMLDivElement>(null)
 
@@ -67,7 +67,7 @@ export default function TopBar() {
               <a
                 href="#"
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                onClick={(e) => { e.preventDefault(); setSupportOpen(false) }}
+                onClick={(e) => { e.preventDefault(); setSupportOpen(false); onOpenOnboarding?.() }}
               >
                 <Rocket className="h-4 w-4 text-gray-400" />
                 Onboarding Wizard

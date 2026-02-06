@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter, useParams } from 'next/navigation'
 import Sidebar from '@/components/org-admin/Sidebar'
 import TopBar from '@/components/org-admin/TopBar'
+import OnboardingWizard from '@/components/org-admin/OnboardingWizard'
 
 export default function OrgSlugLayout({ children }: { children: ReactNode }) {
   const params = useParams()
@@ -12,6 +13,7 @@ export default function OrgSlugLayout({ children }: { children: ReactNode }) {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [organizationName, setOrganizationName] = useState('')
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   useEffect(() => {
     if (status === 'loading') return
@@ -57,11 +59,14 @@ export default function OrgSlugLayout({ children }: { children: ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-white">
       <Sidebar orgSlug={orgSlug} organizationName={organizationName || 'Loading...'} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar />
+        <TopBar onOpenOnboarding={() => setShowOnboarding(true)} />
         <main className="flex-1 overflow-y-auto bg-gray-50">
           {children}
         </main>
       </div>
+      {showOnboarding && (
+        <OnboardingWizard orgSlug={orgSlug} onClose={() => setShowOnboarding(false)} />
+      )}
     </div>
   )
 }
