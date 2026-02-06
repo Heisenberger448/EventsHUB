@@ -35,7 +35,7 @@ export default function BoostPage({ params }: BoostPageProps) {
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Boost Your Event</h1>
-            <p className="text-gray-600 mt-2">Growth strategies and tools to maximize your event's impact</p>
+            <p className="text-gray-600 mt-2">Growth strategies and tools to maximize your event&apos;s impact</p>
           </div>
 
           <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
@@ -44,7 +44,7 @@ export default function BoostPage({ params }: BoostPageProps) {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Growth strategies coming soon</h3>
             <p className="text-gray-500 max-w-md mx-auto">
-              Discover powerful tools and strategies to boost your event's reach and engagement.
+              Discover powerful tools and strategies to boost your event&apos;s reach and engagement.
             </p>
           </div>
         </div>
