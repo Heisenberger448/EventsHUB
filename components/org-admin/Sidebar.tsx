@@ -13,7 +13,11 @@ import {
   FileText,
   BarChart3,
   Gift,
-  TrendingUp
+  TrendingUp,
+  ChevronRight,
+  UserCheck,
+  UserPlus,
+  List
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -28,6 +32,7 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
   const pathname = usePathname()
   const { data: session } = useSession()
   const [showDropdown, setShowDropdown] = useState(false)
+  const [audienceOpen, setAudienceOpen] = useState(true)
   
   const navigation = [
     {
@@ -50,14 +55,6 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
       icon: Send,
       current: pathname === `/${orgSlug}/campaigns`,
       group: 'main'
-    },
-    {
-      name: 'Audience',
-      href: `/${orgSlug}/audience`,
-      icon: Users,
-      current: pathname === `/${orgSlug}/audience`,
-      count: stats?.audienceCount,
-      group: 'secondary'
     },
     {
       name: 'Rewards',
@@ -125,6 +122,70 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
         
         {/* Divider */}
         <div className="py-2"></div>
+        
+        {/* Audience Dropdown */}
+        <div>
+          <button
+            onClick={() => setAudienceOpen(!audienceOpen)}
+            className={`
+              w-full group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors
+              ${pathname.includes(`/${orgSlug}/audience`) || pathname.includes(`/${orgSlug}/ambassadors`) || pathname.includes(`/${orgSlug}/requests`) || pathname.includes(`/${orgSlug}/lists`)
+                ? 'bg-gray-100 text-gray-900'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }
+            `}
+          >
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5" />
+              <span>Audience</span>
+            </div>
+            <ChevronRight className={`h-4 w-4 transition-transform ${audienceOpen ? 'rotate-90' : ''}`} />
+          </button>
+          
+          {audienceOpen && (
+            <div className="ml-4 mt-1 space-y-1">
+              <Link
+                href={`/${orgSlug}/requests`}
+                className={`
+                  flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  ${pathname === `/${orgSlug}/requests`
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                <UserPlus className="h-4 w-4" />
+                <span>Requests</span>
+              </Link>
+              <Link
+                href={`/${orgSlug}/ambassadors`}
+                className={`
+                  flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  ${pathname === `/${orgSlug}/ambassadors`
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                <UserCheck className="h-4 w-4" />
+                <span>Ambassadors</span>
+              </Link>
+              <Link
+                href={`/${orgSlug}/lists`}
+                className={`
+                  flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+                  ${pathname === `/${orgSlug}/lists`
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                <List className="h-4 w-4" />
+                <span>Lists & segments</span>
+              </Link>
+            </div>
+          )}
+        </div>
         
         {navigation.filter(item => item.group === 'secondary').map((item) => {
           const Icon = item.icon
