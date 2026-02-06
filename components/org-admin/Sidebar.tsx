@@ -28,7 +28,11 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
   const pathname = usePathname()
   const { data: session } = useSession()
   const [showDropdown, setShowDropdown] = useState(false)
-  const [audienceOpen, setAudienceOpen] = useState(true)
+  const [audienceOpen, setAudienceOpen] = useState(
+    pathname.startsWith(`/${orgSlug}/ambassadors`) ||
+    pathname.startsWith(`/${orgSlug}/requests`) ||
+    pathname.startsWith(`/${orgSlug}/lists`)
+  )
   
   const navigation = [
     {

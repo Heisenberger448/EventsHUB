@@ -31,7 +31,7 @@ export default function AudiencePage({ params }: { params: { orgSlug: string } }
     fetchAmbassadors()
   }, [])
 
-  const filterAmbassadors = () => {
+  useEffect(() => {
     let filtered = ambassadors
 
     if (searchTerm) {
@@ -48,11 +48,7 @@ export default function AudiencePage({ params }: { params: { orgSlug: string } }
     }
 
     setFilteredAmbassadors(filtered)
-  }
-
-  useEffect(() => {
-    filterAmbassadors()
-  }, [filterAmbassadors, searchTerm, statusFilter, ambassadors])
+  }, [searchTerm, statusFilter, ambassadors])
 
   const fetchAmbassadors = async () => {
     try {
