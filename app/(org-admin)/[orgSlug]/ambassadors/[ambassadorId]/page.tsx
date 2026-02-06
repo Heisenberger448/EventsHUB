@@ -141,7 +141,8 @@ export default function AmbassadorProfilePage({
   })
 
   return (
-    <div className="flex h-full">
+    <div className="p-8 h-full">
+      <div className="flex h-full bg-white rounded-lg border border-gray-200 overflow-hidden">
       {/* Left sidebar – Profile card */}
       <aside className="w-80 border-r border-gray-200 bg-white flex flex-col overflow-y-auto shrink-0">
         {/* Back button */}
@@ -435,6 +436,7 @@ export default function AmbassadorProfilePage({
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   )
