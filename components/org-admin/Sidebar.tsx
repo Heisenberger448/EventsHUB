@@ -12,7 +12,8 @@ import {
   LogOut,
   FileText,
   BarChart3,
-  Gift
+  Gift,
+  TrendingUp
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -152,6 +153,26 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
           )
         })}
       </nav>
+
+      {/* Grow section */}
+      <div className="px-4 py-6 border-t border-gray-200">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+          Grow with SharedCrowd
+        </p>
+        <Link
+          href={`/${orgSlug}/boost`}
+          className={`
+            flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-md transition-colors
+            ${pathname === `/${orgSlug}/boost`
+              ? 'bg-gray-100 text-gray-900'
+              : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }
+          `}
+        >
+          <TrendingUp className="h-5 w-5" />
+          <span>Boost your event</span>
+        </Link>
+      </div>
 
       {/* Integrations - above user section */}
       <div className="px-2 pb-2">
