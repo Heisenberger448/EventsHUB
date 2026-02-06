@@ -1,14 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import OrgLayout from '@/components/org-admin/OrgLayout'
 import { Gift, Plus, X } from 'lucide-react'
-
-interface RewardsPageProps {
-  params: {
-    orgSlug: string
-  }
-}
 
 interface Reward {
   id: string
@@ -17,8 +10,7 @@ interface Reward {
   pointsRequired: number
 }
 
-export default function RewardsPage({ params }: RewardsPageProps) {
-  const [organizationName, setOrganizationName] = useState('')
+export default function RewardsPage({ params }: { params: { orgSlug: string } }) {
   const [rewards, setRewards] = useState<Reward[]>([])
   const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState({
@@ -29,21 +21,8 @@ export default function RewardsPage({ params }: RewardsPageProps) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    fetchOrganizationName()
     fetchRewards()
   }, [])
-
-  const fetchOrganizationName = async () => {
-    try {
-      const res = await fetch(`/api/organizations/id/${params.orgSlug}`)
-      if (res.ok) {
-        const data = await res.json()
-        setOrganizationName(data.name)
-      }
-    } catch (error) {
-      console.error('Failed to fetch organization:', error)
-    }
-  }
 
   const fetchRewards = async () => {
     try {
@@ -90,8 +69,7 @@ export default function RewardsPage({ params }: RewardsPageProps) {
   }
 
   return (
-    <OrgLayout orgSlug={params.orgSlug} organizationName={organizationName || 'Loading...'}>
-      <div className="p-8">
+    <div className="p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8 flex items-center justify-between">
             <div>
@@ -147,7 +125,6 @@ export default function RewardsPage({ params }: RewardsPageProps) {
             </div>
           )}
         </div>
-      </div>
 
       {/* Add Reward Modal */}
       {showModal && (
@@ -230,6 +207,6 @@ export default function RewardsPage({ params }: RewardsPageProps) {
           </div>
         </div>
       )}
-    </OrgLayout>
+    </div>
   )
 }

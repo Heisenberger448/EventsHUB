@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
-import OrgLayout from '@/components/org-admin/OrgLayout'
 import StatCard from '@/components/org-admin/StatCard'
 
 interface DashboardStats {
@@ -40,17 +39,14 @@ export default function OrgDashboardPage({ params }: { params: { orgSlug: string
 
   if (loading || !stats) {
     return (
-      <OrgLayout orgSlug={params.orgSlug} organizationName="Loading...">
-        <div className="p-8">
-          <div className="text-lg">Loading...</div>
-        </div>
-      </OrgLayout>
+      <div className="p-8">
+        <div className="text-lg">Loading...</div>
+      </div>
     )
   }
 
   return (
-    <OrgLayout orgSlug={params.orgSlug} organizationName={stats.organizationName}>
-      <div className="p-8">
+    <div className="p-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h2 className="text-2xl font-bold text-gray-900">
@@ -112,7 +108,6 @@ export default function OrgDashboardPage({ params }: { params: { orgSlug: string
             </a>
           </div>
         </div>
-      </div>
-    </OrgLayout>
+    </div>
   )
 }

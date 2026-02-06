@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import OrgLayout from '@/components/org-admin/OrgLayout'
 import { Plus, Calendar, Target, Award, CheckCircle, Clock, Archive } from 'lucide-react'
 
 interface Event {
@@ -25,7 +24,6 @@ interface Campaign {
 }
 
 export default function CampaignsPage({ params }: { params: { orgSlug: string } }) {
-  const [organizationName, setOrganizationName] = useState('')
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -42,11 +40,6 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
   const fetchData = async () => {
     try {
-      // Fetch org name
-      const dashboardRes = await fetch('/api/stats/dashboard')
-      const dashboardData = await dashboardRes.json()
-      setOrganizationName(dashboardData.organizationName)
-
       // Fetch campaigns
       const campaignsRes = await fetch(`/api/organizations/${params.orgSlug}/campaigns`)
       const campaignsData = await campaignsRes.json()
@@ -131,8 +124,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   }
 
   return (
-    <OrgLayout orgSlug={params.orgSlug} organizationName={organizationName}>
-      <div className="space-y-6">
+    <div className="space-y-6">
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -314,8 +306,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
             ))}
           </div>
         )}
-      </div>
-    </OrgLayout>
+    </div>
   )
 }
 

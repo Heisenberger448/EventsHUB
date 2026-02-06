@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import OrgLayout from '@/components/org-admin/OrgLayout'
 import { Plus, Calendar, Users } from 'lucide-react'
 
 interface Event {
@@ -19,7 +18,6 @@ interface Event {
 export default function EventsPage({ params }: { params: { orgSlug: string } }) {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
-  const [organizationName, setOrganizationName] = useState('')
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -33,20 +31,7 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
 
   useEffect(() => {
     fetchEvents()
-    fetchOrgInfo()
   }, [])
-
-  const fetchOrgInfo = async () => {
-    try {
-      const res = await fetch('/api/stats/dashboard')
-      if (res.ok) {
-        const data = await res.json()
-        setOrganizationName(data.organizationName)
-      }
-    } catch (error) {
-      console.error('Failed to fetch org info:', error)
-    }
-  }
 
   const fetchEvents = async () => {
     try {
@@ -91,8 +76,7 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
   }
 
   return (
-    <OrgLayout orgSlug={params.orgSlug} organizationName={organizationName}>
-      <div className="p-8">
+    <div className="p-8">
         {/* Header */}
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -241,7 +225,6 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
             ))
           )}
         </div>
-      </div>
-    </OrgLayout>
+    </div>
   )
 }

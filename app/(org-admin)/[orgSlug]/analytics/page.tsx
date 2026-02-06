@@ -1,54 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import OrgLayout from '@/components/org-admin/OrgLayout'
 import { BarChart3 } from 'lucide-react'
 
-interface AnalyticsPageProps {
-  params: {
-    orgSlug: string
-  }
-}
-
-export default function AnalyticsPage({ params }: AnalyticsPageProps) {
-  const [organizationName, setOrganizationName] = useState('')
-
-  useEffect(() => {
-    fetchOrganizationName()
-  }, [])
-
-  const fetchOrganizationName = async () => {
-    try {
-      const res = await fetch(`/api/organizations/id/${params.orgSlug}`)
-      if (res.ok) {
-        const data = await res.json()
-        setOrganizationName(data.name)
-      }
-    } catch (error) {
-      console.error('Failed to fetch organization:', error)
-    }
-  }
-
+export default function AnalyticsPage() {
   return (
-    <OrgLayout orgSlug={params.orgSlug} organizationName={organizationName || 'Loading...'}>
-      <div className="p-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
-            <p className="text-gray-600 mt-2">Track and analyze your performance metrics</p>
+    <div className="p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Analytics</h1>
+          <p className="text-gray-600 mt-2">Track and analyze your performance metrics</p>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
+            <BarChart3 className="h-8 w-8 text-gray-400" />
           </div>
-
-          <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-              <BarChart3 className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">No analytics data yet</h3>
-            <p className="text-gray-500 max-w-md mx-auto">
-              Analytics and reporting features will be available soon.
-            </p>
-          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No analytics data yet</h3>
+          <p className="text-gray-500 max-w-md mx-auto">
+            Analytics and reporting features will be available soon.
+          </p>
         </div>
       </div>
-    </OrgLayout>
+    </div>
   )
 }

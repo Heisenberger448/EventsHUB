@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import OrgLayout from '@/components/org-admin/OrgLayout'
 import { Search, Filter, Download, CheckCircle, XCircle, Clock } from 'lucide-react'
 
 interface Ambassador {
@@ -27,11 +26,9 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ACCEPTED')
-  const [organizationName, setOrganizationName] = useState('')
 
   useEffect(() => {
     fetchAmbassadors()
-    fetchOrgInfo()
   }, [])
 
   const filterAmbassadors = () => {
@@ -56,18 +53,6 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
   useEffect(() => {
     filterAmbassadors()
   }, [filterAmbassadors, searchTerm, statusFilter, ambassadors])
-
-  const fetchOrgInfo = async () => {
-    try {
-      const res = await fetch('/api/stats/dashboard')
-      if (res.ok) {
-        const data = await res.json()
-        setOrganizationName(data.organizationName)
-      }
-    } catch (error) {
-      console.error('Failed to fetch org info:', error)
-    }
-  }
 
   const fetchAmbassadors = async () => {
     try {
@@ -126,8 +111,7 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
   }
 
   return (
-    <OrgLayout orgSlug={params.orgSlug} organizationName={organizationName}>
-      <div className="p-8">
+    <div className="p-8">
         {/* Header */}
         <div className="mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Ambassadors</h2>
@@ -288,7 +272,6 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
             </table>
           </div>
         </div>
-      </div>
-    </OrgLayout>
+    </div>
   )
 }

@@ -1,14 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import OrgLayout from '@/components/org-admin/OrgLayout'
 import { UserPlus, Check, X } from 'lucide-react'
-
-interface RequestsPageProps {
-  params: {
-    orgSlug: string
-  }
-}
 
 interface Ambassador {
   id: string
@@ -26,27 +19,13 @@ interface Ambassador {
   createdAt: string
 }
 
-export default function RequestsPage({ params }: RequestsPageProps) {
-  const [organizationName, setOrganizationName] = useState('')
+export default function RequestsPage({ params }: { params: { orgSlug: string } }) {
   const [requests, setRequests] = useState<Ambassador[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    fetchOrganizationName()
     fetchRequests()
   }, [])
-
-  const fetchOrganizationName = async () => {
-    try {
-      const res = await fetch(`/api/organizations/id/${params.orgSlug}`)
-      if (res.ok) {
-        const data = await res.json()
-        setOrganizationName(data.name)
-      }
-    } catch (error) {
-      console.error('Failed to fetch organization:', error)
-    }
-  }
 
   const fetchRequests = async () => {
     try {
@@ -79,8 +58,7 @@ export default function RequestsPage({ params }: RequestsPageProps) {
   }
 
   return (
-    <OrgLayout orgSlug={params.orgSlug} organizationName={organizationName || 'Loading...'}>
-      <div className="p-8">
+    <div className="p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Ambassador Requests</h1>
@@ -174,7 +152,6 @@ export default function RequestsPage({ params }: RequestsPageProps) {
             </div>
           )}
         </div>
-      </div>
-    </OrgLayout>
+    </div>
   )
 }

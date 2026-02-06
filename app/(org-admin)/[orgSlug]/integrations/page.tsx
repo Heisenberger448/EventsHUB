@@ -1,37 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import OrgLayout from '@/components/org-admin/OrgLayout'
 import { LinkIcon } from 'lucide-react'
 
-interface IntegrationsPageProps {
-  params: {
-    orgSlug: string
-  }
-}
-
-export default function IntegrationsPage({ params }: IntegrationsPageProps) {
-  const [organizationName, setOrganizationName] = useState('')
-
-  useEffect(() => {
-    fetchOrganizationName()
-  }, [])
-
-  const fetchOrganizationName = async () => {
-    try {
-      const res = await fetch(`/api/organizations/id/${params.orgSlug}`)
-      if (res.ok) {
-        const data = await res.json()
-        setOrganizationName(data.name)
-      }
-    } catch (error) {
-      console.error('Failed to fetch organization:', error)
-    }
-  }
-
+export default function IntegrationsPage() {
   return (
-    <OrgLayout orgSlug={params.orgSlug} organizationName={organizationName || 'Loading...'}>
-      <div className="p-8">
+    <div className="p-8">
         <div className="max-w-7xl mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900">Integrations</h1>
@@ -257,7 +230,6 @@ export default function IntegrationsPage({ params }: IntegrationsPageProps) {
             </div>
           </div>
         </div>
-      </div>
-    </OrgLayout>
+    </div>
   )
 }
