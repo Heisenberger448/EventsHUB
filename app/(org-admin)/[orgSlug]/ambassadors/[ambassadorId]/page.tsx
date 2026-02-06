@@ -141,10 +141,10 @@ export default function AmbassadorProfilePage({
   })
 
   return (
-    <div className="p-8 h-full">
-      <div className="flex h-full bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="pt-8 px-8">
+      <div className="flex bg-white rounded-lg border border-gray-200 overflow-hidden min-h-[calc(100vh-8rem)]">
       {/* Left sidebar – Profile card */}
-      <aside className="w-80 border-r border-gray-200 bg-white flex flex-col overflow-y-auto shrink-0">
+      <aside className="w-80 border-r border-gray-200 bg-white flex flex-col shrink-0">
         {/* Back button */}
         <div className="px-5 pt-5">
           <button
@@ -318,7 +318,7 @@ export default function AmbassadorProfilePage({
       </aside>
 
       {/* Right content area */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+      <div className="flex-1 flex flex-col bg-gray-50">
         {/* Tabs */}
         <div className="bg-white border-b border-gray-200 px-8">
           <nav className="flex gap-8" aria-label="Tabs">
@@ -339,7 +339,7 @@ export default function AmbassadorProfilePage({
         </div>
 
         {/* Tab content */}
-        <div className="flex-1 overflow-y-auto p-8">
+        <div className="flex-1 p-8">
           {activeTab === 'Overview' && (
             <div className="space-y-6">
               {/* Summary cards */}
