@@ -61,13 +61,21 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Fetch all ambassador event registrations for events belonging to the user's organization
+    // Build filter
+    const status = searchParams.get('status')
+    const where: any = {
+      event: {
+        organizationId: session.user.organizationId
+      }
+    }
+
+    if (status && ['PENDING', 'ACCEPTED', 'REJECTED'].includes(status)) {
+      where.status = status
+    }
+
+    // Fetch ambassador event registrations for events belonging to the user's organization
     const ambassadorEvents = await prisma.ambassadorEvent.findMany({
-      where: {
-        event: {
-          organizationId: session.user.organizationId
-        }
-      },
+      where,
       select: {
         id: true,
         status: true,
@@ -82,6 +90,8 @@ export async function GET(request: NextRequest) {
           select: {
             id: true,
             name: true,
+            firstName: true,
+            lastName: true,
             email: true
           }
         },
