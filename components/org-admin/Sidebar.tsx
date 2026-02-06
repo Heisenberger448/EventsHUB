@@ -194,7 +194,7 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
               key={item.name}
               href={item.href}
               className={`
-                group flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors
+                group flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors
                 ${item.current
                   ? 'bg-gray-100 text-gray-900'
                   : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
@@ -205,11 +205,6 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
                 <Icon className="h-5 w-5" />
                 <span>{item.name}</span>
               </div>
-              {item.count !== undefined && (
-                <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-medium text-gray-600 bg-gray-200 rounded-full">
-                  {item.count}
-                </span>
-              )}
             </Link>
           )
         })}
