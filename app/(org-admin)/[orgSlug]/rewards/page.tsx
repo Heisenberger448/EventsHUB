@@ -76,9 +76,14 @@ export default function RewardsPage({ params }: RewardsPageProps) {
         setRewards([...rewards, newReward])
         setShowModal(false)
         setFormData({ name: '', description: '', pointsRequired: 0 })
+      } else {
+        const error = await res.json()
+        console.error('Failed to create reward:', error)
+        alert(`Failed to create reward: ${error.error || 'Unknown error'}`)
       }
     } catch (error) {
       console.error('Failed to create reward:', error)
+      alert('Failed to create reward. Please try again.')
     } finally {
       setLoading(false)
     }
