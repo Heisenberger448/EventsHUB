@@ -39,6 +39,7 @@ model Organization {
   
   users     User[]
   events    Event[]
+  rewards   Reward[]
 }
 
 model User {
@@ -135,4 +136,17 @@ model AmbassadorEvent {
   @@index([userId])
   @@index([eventId])
   @@index([status])
+}
+
+model Reward {
+  id              String       @id @default(cuid())
+  organizationId  String
+  name            String
+  description     String
+  pointsRequired  Int
+  createdAt       DateTime     @default(now())
+  
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId])
 }
