@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Search, Filter, Download, CheckCircle, XCircle, Clock } from 'lucide-react'
 
 interface Ambassador {
@@ -201,7 +202,12 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">{ambassador.user.name}</div>
-                          <div className="text-sm text-gray-500">{ambassador.user.email}</div>
+                          <Link
+                            href={`/${params.orgSlug}/ambassadors/${ambassador.id}`}
+                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                          >
+                            {ambassador.user.email}
+                          </Link>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
