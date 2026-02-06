@@ -11,7 +11,8 @@ import {
   ChevronDown,
   LogOut,
   FileText,
-  BarChart3
+  BarChart3,
+  Gift
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -55,6 +56,13 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
       icon: Users,
       current: pathname === `/${orgSlug}/audience`,
       count: stats?.audienceCount,
+      group: 'secondary'
+    },
+    {
+      name: 'Rewards',
+      href: `/${orgSlug}/rewards`,
+      icon: Gift,
+      current: pathname === `/${orgSlug}/rewards`,
       group: 'secondary'
     },
     {
