@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Calendar, Users, X, Loader2, ChevronDown, Link2, Lock } from 'lucide-react'
+import { Plus, Calendar, Users, X, Loader2, ChevronDown, Link2, Lock, Trash2 } from 'lucide-react'
 
 interface Event {
   id: string
@@ -49,6 +49,8 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
   const [loadingProviders, setLoadingProviders] = useState(false)
   const [shops, setShops] = useState<WeeztixShop[]>([])
   const [loadingShops, setLoadingShops] = useState(false)
+  const [editingEvent, setEditingEvent] = useState<Event | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     fetchEvents()
@@ -98,10 +100,35 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
 
   const openModal = () => {
     setFormData({ name: '', description: '', startDate: '', endDate: '', ticketProvider: '', ticketShopId: '', ticketShopName: '' })
+    setEditingEvent(null)
     setError('')
     setShops([])
     setShowModal(true)
     fetchProviders()
+  }
+
+  const openEditModal = (event: Event) => {
+    const formatDate = (d: string | null) => {
+      if (!d) return ''
+      return new Date(d).toISOString().split('T')[0]
+    }
+    setFormData({
+      name: event.name,
+      description: event.description || '',
+      startDate: formatDate(event.startDate),
+      endDate: formatDate(event.endDate),
+      ticketProvider: event.ticketProvider || '',
+      ticketShopId: event.ticketShopId || '',
+      ticketShopName: event.ticketShopName || '',
+    })
+    setEditingEvent(event)
+    setError('')
+    setShops([])
+    setShowModal(true)
+    fetchProviders()
+    if (event.ticketProvider === 'weeztix') {
+      fetchShops()
+    }
   }
 
   const handleProviderChange = (providerId: string) => {
@@ -149,24 +176,67 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
     setError('')
 
     try {
-      const res = await fetch('/api/events', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
+      if (editingEvent) {
+        // Update existing event
+        const res = await fetch(`/api/events/${editingEvent.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        })
 
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to create event')
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Bijwerken mislukt')
+        }
+
+        const updated = await res.json()
+        setEvents(events.map((ev) => (ev.id === updated.id ? { ...ev, ...updated } : ev)))
+      } else {
+        // Create new event
+        const res = await fetch('/api/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData)
+        })
+
+        if (!res.ok) {
+          const data = await res.json()
+          throw new Error(data.error || 'Aanmaken mislukt')
+        }
+
+        const newEvent = await res.json()
+        setEvents([newEvent, ...events])
       }
 
-      const newEvent = await res.json()
-      setEvents([newEvent, ...events])
       setShowModal(false)
     } catch (err: any) {
       setError(err.message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!editingEvent) return
+    if (!confirm(`Weet je zeker dat je "${editingEvent.name}" wilt verwijderen? Dit kan niet ongedaan worden gemaakt.`)) return
+
+    setDeleting(true)
+    setError('')
+
+    try {
+      const res = await fetch(`/api/events/${editingEvent.id}`, { method: 'DELETE' })
+
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Verwijderen mislukt')
+      }
+
+      setEvents(events.filter((ev) => ev.id !== editingEvent.id))
+      setShowModal(false)
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -193,7 +263,9 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
             <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
               {/* Modal header */}
               <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900">Nieuw event aanmaken</h2>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {editingEvent ? 'Event bewerken' : 'Nieuw event aanmaken'}
+                </h2>
                 <button
                   onClick={() => setShowModal(false)}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
@@ -351,28 +423,52 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
                 )}
 
                 {/* Actions */}
-                <div className="flex gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowModal(false)}
-                    className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    Annuleren
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {submitting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Aanmaken...
-                      </>
-                    ) : (
-                      'Event aanmaken'
-                    )}
-                  </button>
+                <div className="pt-2 space-y-3">
+                  {editingEvent && (
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="w-full px-4 py-2.5 bg-red-50 text-red-700 text-sm font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-2 border border-red-200"
+                    >
+                      {deleting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Verwijderen...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4" />
+                          Event verwijderen
+                        </>
+                      )}
+                    </button>
+                  )}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowModal(false)}
+                      className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      Annuleren
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {submitting ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          {editingEvent ? 'Opslaan...' : 'Aanmaken...'}
+                        </>
+                      ) : editingEvent ? (
+                        'Opslaan'
+                      ) : (
+                        'Event aanmaken'
+                      )}
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
@@ -391,7 +487,11 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
             </div>
           ) : (
             events.map((event) => (
-              <div key={event.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div
+                key={event.id}
+                onClick={() => openEditModal(event)}
+                className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+              >
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">{event.name}</h3>
                 {event.description && (
                   <p className="text-sm text-gray-600 mb-4 line-clamp-2">{event.description}</p>
@@ -408,14 +508,14 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
                     {event._count?.ambassadors || 0} ambassadors
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                   <a
                     href={`/e/${event.slug}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex-1 px-3 py-2 text-center border border-gray-300 rounded-lg hover:bg-gray-50 text-sm"
                   >
-                    View Page
+                    Bekijk pagina
                   </a>
                 </div>
               </div>
