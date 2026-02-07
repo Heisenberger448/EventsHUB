@@ -8,44 +8,22 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
- * Extract ticket count from a Weeztix stats object.
- * Tries many possible field names since the exact API schema is unknown.
- */
-function findTicketCount(obj: any): number {
-  if (!obj || typeof obj !== 'object') return 0
-
-  // Direct numeric fields that might represent ticket count
-  const candidates = [
-    'tickets_count', 'ticketsCount', 'tickets',
-    'sold_count', 'soldCount', 'sold',
-    'orders_count', 'ordersCount', 'orders',
-    'count', 'total', 'quantity',
-    'total_tickets', 'totalTickets',
-    'number_of_tickets', 'numberOfTickets',
-  ]
-
-  for (const key of candidates) {
-    if (typeof obj[key] === 'number') return obj[key]
-  }
-
-  // Check nested: obj.statistics.tickets, obj.stats.count, etc.
-  for (const nested of ['statistics', 'stats', 'summary', 'totals']) {
-    if (obj[nested] && typeof obj[nested] === 'object') {
-      for (const key of candidates) {
-        if (typeof obj[nested][key] === 'number') return obj[nested][key]
-      }
-    }
-  }
-
-  return 0
-}
-
-/**
  * POST /api/integrations/weeztix/sync-stats
- * Fetches tracker statistics from Weeztix and updates ticketsSold for each ambassador.
- * 
- * Weeztix API: GET https://api.weeztix.com/statistics/trackers
- * Returns array of tracker stats with orders_count / tickets_count per tracker guid.
+ *
+ * Weeztix GET /statistics/trackers returns an Elasticsearch aggregation:
+ *   {
+ *     aggregations: {
+ *       trackersPastFortNight: {
+ *         doc_count: 116,
+ *         "<trackerCode>": {          // e.g. "nqd6qzkm", "ysqmrgbt"
+ *           doc_count: 5,             // ← number of orders for this tracker
+ *           statistics: { ... }
+ *         }
+ *       }
+ *     }
+ *   }
+ *
+ * We match each tracker by its CODE (not GUID) against our ambassador events.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -73,7 +51,7 @@ export async function POST(request: NextRequest) {
     // Find all ambassador events with a tracker in this organization
     const ambassadorEvents = await prisma.ambassadorEvent.findMany({
       where: {
-        trackerGuid: { not: null },
+        trackerCode: { not: null },
         event: { organizationId },
       },
       select: {
@@ -104,126 +82,74 @@ export async function POST(request: NextRequest) {
       headers['Company'] = credentials.companyGuid
     }
 
-    // The /statistics/trackers endpoint returns Elasticsearch aggregations
-    // (global revenue per day), NOT per-tracker ticket counts.
-    // So we fetch each tracker individually via GET /trackers/{guid}
-    // and also try GET /trackers to list all trackers with their order counts.
-
     const now = new Date()
     let synced = 0
     const debugInfo: any[] = []
-    const statsMap = new Map<string, number>()
 
-    // --- Step 1: Try GET /trackers to list all trackers with stats ---
+    // Map of trackerCode -> ticketsSold
+    const codeToTickets = new Map<string, number>()
+
+    // --- Fetch GET /statistics/trackers (Elasticsearch aggregation) ---
     try {
-      const listRes = await fetch('https://api.weeztix.com/trackers', {
+      const statsRes = await fetch('https://api.weeztix.com/statistics/trackers', {
         method: 'GET',
         headers,
       })
-      console.log('[sync-stats] GET /trackers =>', listRes.status)
+      console.log('[sync-stats] GET /statistics/trackers =>', statsRes.status)
 
-      if (listRes.ok) {
-        const listData = await listRes.json()
-        const trackers: any[] = Array.isArray(listData)
-          ? listData
-          : listData.data || listData.trackers || listData.results || []
+      if (statsRes.ok) {
+        const statsData = await statsRes.json()
 
-        console.log('[sync-stats] Trackers list: found', trackers.length, 'trackers')
-        if (trackers.length > 0) {
-          console.log('[sync-stats] Sample tracker keys:', Object.keys(trackers[0]))
-          console.log('[sync-stats] Sample tracker:', JSON.stringify(trackers[0]).substring(0, 500))
-        }
+        // Navigate into the aggregation: aggregations.trackersPastFortNight
+        const agg =
+          statsData?.aggregations?.trackersPastFortNight ||
+          statsData?.aggregations?.trackers ||
+          statsData?.aggregations
 
-        for (const tracker of trackers) {
-          const guid = tracker.guid || tracker.id || tracker.uuid
-          if (!guid) continue
-          const tickets = findTicketCount(tracker)
-          statsMap.set(guid, tickets)
-          debugInfo.push({
-            source: 'list',
-            guid,
-            tickets,
-            keys: Object.keys(tracker),
-            raw: Object.fromEntries(
-              Object.entries(tracker).filter(([_, v]) => typeof v === 'number' || typeof v === 'string')
-            ),
-          })
-        }
-      }
-    } catch (e) {
-      console.error('[sync-stats] List trackers error:', e)
-    }
+        if (agg && typeof agg === 'object') {
+          // Build set of our tracker codes for fast lookup
+          const ourCodes = new Set(
+            ambassadorEvents.map(ae => ae.trackerCode).filter(Boolean) as string[]
+          )
 
-    // --- Step 2: For any tracker GUIDs we still don't have, fetch individually ---
-    const missingGuids = ambassadorEvents.filter(
-      ae => ae.trackerGuid && !statsMap.has(ae.trackerGuid)
-    )
+          console.log('[sync-stats] Our tracker codes:', Array.from(ourCodes))
+          console.log('[sync-stats] Aggregation keys:', Object.keys(agg))
 
-    if (missingGuids.length > 0) {
-      console.log(`[sync-stats] Fetching ${missingGuids.length} individual tracker(s)...`)
-    }
+          // Each key in agg that is NOT a meta field is a tracker code
+          for (const [key, value] of Object.entries(agg)) {
+            // Skip Elasticsearch meta fields
+            if (['doc_count', 'doc_count_error_upper_bound', 'sum_other_doc_count', 'key', 'key_as_string'].includes(key)) continue
+            if (!value || typeof value !== 'object') continue
 
-    for (const ae of missingGuids) {
-      if (!ae.trackerGuid) continue
-      try {
-        // Try GET /trackers/{guid}
-        const trackerRes = await fetch(`https://api.weeztix.com/trackers/${ae.trackerGuid}`, {
-          method: 'GET',
-          headers,
-        })
-        console.log(`[sync-stats] GET /trackers/${ae.trackerGuid} =>`, trackerRes.status)
+            const trackerData = value as any
+            const docCount = trackerData.doc_count
 
-        if (trackerRes.ok) {
-          const trackerData = await trackerRes.json()
-          const data = trackerData.data || trackerData
-          console.log(`[sync-stats] Tracker ${ae.trackerGuid}:`, JSON.stringify(data).substring(0, 1000))
-          const tickets = findTicketCount(data)
-          statsMap.set(ae.trackerGuid, tickets)
-          debugInfo.push({
-            source: 'individual',
-            guid: ae.trackerGuid,
-            tickets,
-            keys: Object.keys(data),
-            raw: Object.fromEntries(
-              Object.entries(data).filter(([_, v]) => typeof v === 'number' || typeof v === 'string')
-            ),
-          })
-        }
-
-        // Also try GET /statistics/trackers/{guid} as alternative
-        if (!statsMap.has(ae.trackerGuid) || statsMap.get(ae.trackerGuid) === 0) {
-          const statsRes = await fetch(`https://api.weeztix.com/statistics/trackers/${ae.trackerGuid}`, {
-            method: 'GET',
-            headers,
-          })
-          console.log(`[sync-stats] GET /statistics/trackers/${ae.trackerGuid} =>`, statsRes.status)
-
-          if (statsRes.ok) {
-            const statsBody = await statsRes.json()
-            console.log(`[sync-stats] Stats for ${ae.trackerGuid}:`, JSON.stringify(statsBody).substring(0, 1000))
-            const sData = statsBody.data || statsBody
-            const tickets = findTicketCount(sData)
-            if (tickets > 0) {
-              statsMap.set(ae.trackerGuid, tickets)
+            if (typeof docCount === 'number') {
+              codeToTickets.set(key, docCount)
               debugInfo.push({
-                source: 'statistics-individual',
-                guid: ae.trackerGuid,
-                tickets,
-                keys: Object.keys(sData),
+                trackerCode: key,
+                docCount,
+                isOurs: ourCodes.has(key),
               })
+              console.log(`[sync-stats] Tracker "${key}": doc_count=${docCount}, isOurs=${ourCodes.has(key)}`)
             }
           }
+        } else {
+          console.log('[sync-stats] Could not find aggregation in response. Top-level keys:', Object.keys(statsData))
         }
-      } catch (e) {
-        console.error(`[sync-stats] Error fetching tracker ${ae.trackerGuid}:`, e)
+      } else {
+        const errText = await statsRes.text()
+        console.error('[sync-stats] Statistics API failed:', statsRes.status, errText.substring(0, 500))
       }
+    } catch (e) {
+      console.error('[sync-stats] Statistics fetch error:', e)
     }
 
-    // --- Step 3: Update ambassador events ---
+    // --- Update ambassador events by matching tracker code ---
     for (const ae of ambassadorEvents) {
-      if (!ae.trackerGuid) continue
+      if (!ae.trackerCode) continue
 
-      const tickets = statsMap.get(ae.trackerGuid) ?? 0
+      const tickets = codeToTickets.get(ae.trackerCode) ?? 0
 
       await prisma.ambassadorEvent.update({
         where: { id: ae.id },
@@ -233,12 +159,12 @@ export async function POST(request: NextRequest) {
         },
       })
       synced++
+      console.log(`[sync-stats] Updated ${ae.trackerCode}: ticketsSold=${tickets}`)
     }
 
     return NextResponse.json({
       message: `${synced} tracker(s) gesynchroniseerd.`,
       synced,
-      totalTrackers: statsMap.size,
       lastSyncedAt: now.toISOString(),
       debug: debugInfo,
     })
