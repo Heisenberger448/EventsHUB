@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, Filter, Download, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Search, Filter, Download, CheckCircle, XCircle, Clock, RefreshCw, Ticket } from 'lucide-react'
 
 interface Ambassador {
   id: string
@@ -10,6 +10,10 @@ interface Ambassador {
   createdAt: string
   instagram: string | null
   tiktok: string | null
+  ticketsSold: number
+  trackerCode: string | null
+  trackerUrl: string | null
+  lastSyncedAt: string | null
   user: {
     id: string
     name: string
@@ -27,6 +31,8 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('ACCEPTED')
+  const [syncing, setSyncing] = useState(false)
+  const [lastSynced, setLastSynced] = useState<string | null>(null)
 
   useEffect(() => {
     fetchAmbassadors()
@@ -58,11 +64,41 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
         const data = await res.json()
         setAmbassadors(data)
         setFilteredAmbassadors(data)
+        // Find the most recent sync time
+        const synced = data
+          .map((a: Ambassador) => a.lastSyncedAt)
+          .filter(Boolean)
+          .sort()
+          .pop()
+        if (synced) setLastSynced(synced)
       }
     } catch (error) {
       console.error('Failed to fetch ambassadors:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const syncStats = async () => {
+    setSyncing(true)
+    try {
+      const res = await fetch('/api/integrations/weeztix/sync-stats', {
+        method: 'POST',
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setLastSynced(data.lastSyncedAt)
+        // Refresh ambassador data to get updated ticketsSold
+        await fetchAmbassadors()
+      } else {
+        const err = await res.json()
+        alert(err.error || 'Synchronisatie mislukt')
+      }
+    } catch (error) {
+      console.error('Failed to sync stats:', error)
+      alert('Synchronisatie mislukt')
+    } finally {
+      setSyncing(false)
     }
   }
 
@@ -104,19 +140,27 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
     total: ambassadors.length,
     pending: ambassadors.filter(a => a.status === 'PENDING').length,
     accepted: ambassadors.filter(a => a.status === 'ACCEPTED').length,
-    rejected: ambassadors.filter(a => a.status === 'REJECTED').length
+    rejected: ambassadors.filter(a => a.status === 'REJECTED').length,
+    totalTickets: ambassadors.reduce((sum, a) => sum + (a.ticketsSold || 0), 0),
   }
 
   return (
     <div className="p-8">
         {/* Header */}
-        <div className="mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Ambassadors</h2>
-          <p className="text-gray-600 mt-1">Manage your accepted ambassadors</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Ambassadors</h2>
+            <p className="text-gray-600 mt-1">Manage your accepted ambassadors</p>
+          </div>
+          {lastSynced && (
+            <p className="text-xs text-gray-400">
+              Laatst gesynchroniseerd: {new Date(lastSynced).toLocaleString('nl-NL')}
+            </p>
+          )}
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <p className="text-sm text-gray-600">Total Ambassadors</p>
             <p className="text-2xl font-bold text-gray-900">{stats.accepted}</p>
@@ -124,6 +168,13 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <p className="text-sm text-gray-600">All Registrations</p>
             <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2">
+              <Ticket className="h-4 w-4 text-blue-500" />
+              <p className="text-sm text-gray-600">Tickets Sold</p>
+            </div>
+            <p className="text-2xl font-bold text-blue-600">{stats.totalTickets}</p>
           </div>
         </div>
 
@@ -154,6 +205,14 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
               <Download className="h-4 w-4" />
               Export
             </button>
+            <button
+              onClick={syncStats}
+              disabled={syncing}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync Tickets'}
+            </button>
           </div>
         </div>
 
@@ -173,6 +232,9 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
                     Event
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Tickets Sold
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -186,13 +248,13 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
               <tbody className="bg-white divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                       Loading...
                     </td>
                   </tr>
                 ) : filteredAmbassadors.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
                       No ambassadors found
                     </td>
                   </tr>
@@ -242,6 +304,18 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{ambassador.event.name}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {ambassador.trackerCode ? (
+                          <div className="flex items-center gap-1.5">
+                            <Ticket className="h-4 w-4 text-blue-500" />
+                            <span className="text-sm font-semibold text-gray-900">
+                              {ambassador.ticketsSold}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         {getStatusBadge(ambassador.status)}

@@ -131,10 +131,12 @@ model AmbassadorEvent {
   birthDate String?
   gender    String?
   address   String?
-  trackerGuid String?
-  trackerCode String?
-  trackerUrl  String?
-  createdAt DateTime          @default(now())
+  trackerGuid  String?
+  trackerCode  String?
+  trackerUrl   String?
+  ticketsSold  Int              @default(0)
+  lastSyncedAt DateTime?
+  createdAt    DateTime          @default(now())
   
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   event     Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)

@@ -86,6 +86,10 @@ export async function GET(request: NextRequest) {
         birthDate: true,
         gender: true,
         address: true,
+        ticketsSold: true,
+        trackerCode: true,
+        trackerUrl: true,
+        lastSyncedAt: true,
         user: {
           select: {
             id: true,
