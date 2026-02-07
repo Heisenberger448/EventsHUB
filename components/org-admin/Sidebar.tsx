@@ -6,7 +6,6 @@ import {
   LayoutDashboard, 
   Users, 
   Send, 
-  Calendar,
   Link as LinkIcon,
   ChevronDown,
   ChevronUp,
@@ -44,13 +43,6 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
       href: `/${orgSlug}/dashboard`,
       icon: LayoutDashboard,
       current: pathname === `/${orgSlug}/dashboard`,
-      group: 'main'
-    },
-    {
-      name: 'Events',
-      href: `/${orgSlug}/events`,
-      icon: Calendar,
-      current: pathname === `/${orgSlug}/events`,
       group: 'main'
     },
     {
