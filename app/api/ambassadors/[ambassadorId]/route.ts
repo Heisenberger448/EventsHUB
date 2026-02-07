@@ -202,7 +202,7 @@ export async function PATCH(
               const trackerGuid = trackerData.guid || trackerData.data?.guid
               const trackerCode = trackerData.code || trackerData.data?.code
               const trackerUrl = trackerCode
-                ? `https://shop.weeztix.com/${trackerCode}`
+                ? `https://weeztix.shop/${trackerCode}`
                 : null
 
               await prisma.ambassadorEvent.update({
