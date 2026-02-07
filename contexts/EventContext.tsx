@@ -18,6 +18,8 @@ interface EventContextType {
   setShowCreateModal: (show: boolean) => void
   showEventChoiceModal: boolean
   setShowEventChoiceModal: (show: boolean) => void
+  weeztixReturnPending: boolean
+  setWeeztixReturnPending: (pending: boolean) => void
   refreshEvents: () => Promise<void>
 }
 
@@ -30,6 +32,8 @@ const EventContext = createContext<EventContextType>({
   setShowCreateModal: () => {},
   showEventChoiceModal: false,
   setShowEventChoiceModal: () => {},
+  weeztixReturnPending: false,
+  setWeeztixReturnPending: () => {},
   refreshEvents: async () => {},
 })
 
@@ -43,6 +47,7 @@ export function EventProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showEventChoiceModal, setShowEventChoiceModal] = useState(false)
+  const [weeztixReturnPending, setWeeztixReturnPending] = useState(false)
 
   const fetchEvents = async () => {
     try {
@@ -92,7 +97,7 @@ export function EventProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <EventContext.Provider value={{ events, selectedEvent, setSelectedEvent: handleSetSelectedEvent, loading, showCreateModal, setShowCreateModal, showEventChoiceModal, setShowEventChoiceModal, refreshEvents }}>
+    <EventContext.Provider value={{ events, selectedEvent, setSelectedEvent: handleSetSelectedEvent, loading, showCreateModal, setShowCreateModal, showEventChoiceModal, setShowEventChoiceModal, weeztixReturnPending, setWeeztixReturnPending, refreshEvents }}>
       {children}
     </EventContext.Provider>
   )

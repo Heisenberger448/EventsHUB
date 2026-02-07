@@ -1,14 +1,24 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, Suspense, useEffect, useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Sidebar from '@/components/org-admin/Sidebar'
 import TopBar from '@/components/org-admin/TopBar'
 import OnboardingWizard from '@/components/org-admin/OnboardingWizard'
 import CreateEventModal from '@/components/org-admin/CreateEventModal'
 import { EventProvider, useEventContext } from '@/contexts/EventContext'
-import { Ticket, PenLine, X, ChevronLeft, ExternalLink, CheckCircle2, Clock, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { Ticket, PenLine, X, ChevronLeft, ExternalLink, CheckCircle2, Clock, Eye, EyeOff, Loader2, Calendar, MapPin, Search } from 'lucide-react'
+
+/* ── Weeztix event type ───────────────────────────────────── */
+interface WeeztixEvent {
+  guid: string
+  name: string
+  description: string | null
+  start: string | null
+  end: string | null
+  location: string | null
+}
 
 /* ── Ticket Provider definitions ──────────────────────────── */
 const TICKET_PROVIDERS = [
@@ -48,8 +58,8 @@ const TICKET_PROVIDERS = [
 
 /* ── Event Choice Modal (Connect Provider vs Add Manually) ── */
 function EventChoiceModal() {
-  const { showEventChoiceModal, setShowEventChoiceModal, setShowCreateModal } = useEventContext()
-  const [step, setStep] = useState<'choice' | 'providers' | 'weeztix'>('choice')
+  const { showEventChoiceModal, setShowEventChoiceModal, setShowCreateModal, refreshEvents, setSelectedEvent, weeztixReturnPending, setWeeztixReturnPending } = useEventContext()
+  const [step, setStep] = useState<'choice' | 'providers' | 'weeztix' | 'weeztix-events'>('choice')
 
   /* Weeztix connect form state */
   const [clientId, setClientId] = useState('')
@@ -58,6 +68,14 @@ function EventChoiceModal() {
   const [connecting, setConnecting] = useState(false)
   const [connectError, setConnectError] = useState('')
 
+  /* Weeztix events state */
+  const [weeztixEvents, setWeeztixEvents] = useState<WeeztixEvent[]>([])
+  const [loadingEvents, setLoadingEvents] = useState(false)
+  const [eventsError, setEventsError] = useState('')
+  const [eventSearch, setEventSearch] = useState('')
+  const [selectedWeeztixEvent, setSelectedWeeztixEvent] = useState<WeeztixEvent | null>(null)
+  const [importing, setImporting] = useState(false)
+
   const handleClose = () => {
     setShowEventChoiceModal(false)
     setStep('choice')
@@ -65,6 +83,10 @@ function EventChoiceModal() {
     setClientSecret('')
     setShowSecret(false)
     setConnectError('')
+    setWeeztixEvents([])
+    setEventsError('')
+    setEventSearch('')
+    setSelectedWeeztixEvent(null)
   }
 
   const handleWeeztixConnect = async () => {
@@ -85,7 +107,7 @@ function EventChoiceModal() {
         setConnectError(data.error || 'Er ging iets mis')
         return
       }
-      // Redirect to Weeztix OAuth
+      // Redirect to Weeztix OAuth — after callback we return with ?weeztixConnected=true
       window.location.href = data.authUrl
     } catch {
       setConnectError('Kan niet verbinden met de server')
@@ -93,6 +115,81 @@ function EventChoiceModal() {
       setConnecting(false)
     }
   }
+
+  /* fetch Weeztix events */
+  const fetchWeeztixEvents = async () => {
+    setLoadingEvents(true)
+    setEventsError('')
+    try {
+      const res = await fetch('/api/integrations/weeztix/events')
+      if (!res.ok) {
+        const data = await res.json()
+        setEventsError(data.error || 'Kon events niet ophalen')
+        return
+      }
+      const data = await res.json()
+      setWeeztixEvents(Array.isArray(data) ? data : [])
+    } catch {
+      setEventsError('Kon events niet ophalen van Weeztix')
+    } finally {
+      setLoadingEvents(false)
+    }
+  }
+
+  /* called when step changes to weeztix-events */
+  const goToEvents = () => {
+    setStep('weeztix-events')
+    fetchWeeztixEvents()
+  }
+
+  /* Auto-open at events step when returning from Weeztix OAuth */
+  useEffect(() => {
+    if (weeztixReturnPending && showEventChoiceModal) {
+      setStep('weeztix-events')
+      fetchWeeztixEvents()
+      setWeeztixReturnPending(false)
+    }
+  }, [weeztixReturnPending, showEventChoiceModal])
+
+  /* import selected event into platform */
+  const handleImportEvent = async () => {
+    if (!selectedWeeztixEvent) return
+    setImporting(true)
+    try {
+      const res = await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: selectedWeeztixEvent.name,
+          description: selectedWeeztixEvent.description || '',
+          startDate: selectedWeeztixEvent.start || null,
+          endDate: selectedWeeztixEvent.end || null,
+          ticketProvider: 'weeztix',
+          ticketShopId: selectedWeeztixEvent.guid,
+          ticketShopName: selectedWeeztixEvent.name,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setEventsError(data.error || 'Event importeren mislukt')
+        return
+      }
+      const newEvent = await res.json()
+      await refreshEvents()
+      setSelectedEvent(newEvent)
+      handleClose()
+    } catch {
+      setEventsError('Er ging iets mis bij het importeren')
+    } finally {
+      setImporting(false)
+    }
+  }
+
+  const filteredEvents = weeztixEvents.filter(
+    (e) =>
+      e.name.toLowerCase().includes(eventSearch.toLowerCase()) ||
+      (e.location && e.location.toLowerCase().includes(eventSearch.toLowerCase()))
+  )
 
   if (!showEventChoiceModal) return null
 
@@ -208,7 +305,7 @@ function EventChoiceModal() {
               ))}
             </div>
           </>
-        ) : (
+        ) : step === 'weeztix' ? (
           <>
             {/* ── Weeztix connect form ── */}
             <div className="flex items-center gap-3 mb-5">
@@ -241,7 +338,7 @@ function EventChoiceModal() {
                 → Bedrijfsinstellingen → OAuth Clients en maak een nieuwe client aan.
               </p>
               <p className="text-sm text-blue-800 mt-2">
-                <strong>Stap 2:</strong> Kopieer de Client ID en Client Secret hieronder.
+                <strong>Stap 2:</strong> Kopieer de Client ID en Client Secret hieronder en klik op Volgende.
               </p>
             </div>
 
@@ -306,10 +403,118 @@ function EventChoiceModal() {
                     Verbinden...
                   </>
                 ) : (
-                  'Verbinden met Weeztix'
+                  'Volgende →'
                 )}
               </button>
             </div>
+          </>
+        ) : (
+          <>
+            {/* ── Weeztix events selection ── */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-9 h-9 bg-[#0F172A] rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">W</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 leading-tight">Event importeren</h2>
+                <p className="text-xs text-gray-500">Selecteer een event uit Weeztix</p>
+              </div>
+            </div>
+
+            {/* Search */}
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Zoek event..."
+                value={eventSearch}
+                onChange={(e) => setEventSearch(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Events list */}
+            <div className="max-h-72 overflow-y-auto space-y-1.5 mb-4">
+              {loadingEvents ? (
+                <div className="flex flex-col items-center justify-center py-10">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">Events ophalen uit Weeztix...</p>
+                </div>
+              ) : eventsError ? (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">{eventsError}</p>
+                  <button
+                    onClick={fetchWeeztixEvents}
+                    className="mt-2 text-sm text-red-700 underline font-medium"
+                  >
+                    Opnieuw proberen
+                  </button>
+                </div>
+              ) : filteredEvents.length === 0 ? (
+                <div className="text-center py-8">
+                  <Calendar className="mx-auto h-8 w-8 text-gray-300 mb-2" />
+                  <p className="text-sm text-gray-500">
+                    {eventSearch ? 'Geen events gevonden voor deze zoekopdracht.' : 'Geen events gevonden in Weeztix.'}
+                  </p>
+                </div>
+              ) : (
+                filteredEvents.map((evt) => {
+                  const isSelected = selectedWeeztixEvent?.guid === evt.guid
+                  return (
+                    <button
+                      key={evt.guid}
+                      onClick={() => setSelectedWeeztixEvent(isSelected ? null : evt)}
+                      className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
+                        isSelected
+                          ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-200'
+                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                        isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                      }`}>
+                        {isSelected && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="font-medium text-gray-900 text-sm block truncate">{evt.name}</span>
+                        <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
+                          {evt.start && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(evt.start).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                          {evt.location && (
+                            <span className="flex items-center gap-1 truncate">
+                              <MapPin className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{evt.location}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Import button */}
+            <button
+              onClick={handleImportEvent}
+              disabled={!selectedWeeztixEvent || importing}
+              className="w-full px-4 py-2.5 bg-[#0F172A] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {importing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Importeren...
+                </>
+              ) : (
+                'Event importeren'
+              )}
+            </button>
           </>
         )}
       </div>
@@ -330,6 +535,26 @@ function EventModalWrapper({ orgSlug }: { orgSlug: string }) {
       }}
     />
   )
+}
+
+/* Detects ?weeztixConnected=true after OAuth callback and opens modal at events step */
+function WeeztixReturnDetector() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const { setShowEventChoiceModal, setWeeztixReturnPending } = useEventContext()
+
+  useEffect(() => {
+    if (searchParams.get('weeztixConnected') === 'true') {
+      setWeeztixReturnPending(true)
+      setShowEventChoiceModal(true)
+      // Clean the URL
+      const url = new URL(window.location.href)
+      url.searchParams.delete('weeztixConnected')
+      router.replace(url.pathname + url.search)
+    }
+  }, [searchParams])
+
+  return null
 }
 
 export default function OrgSlugLayout({ children }: { children: ReactNode }) {
@@ -395,6 +620,9 @@ export default function OrgSlugLayout({ children }: { children: ReactNode }) {
         )}
         <EventModalWrapper orgSlug={orgSlug} />
         <EventChoiceModal />
+        <Suspense fallback={null}>
+          <WeeztixReturnDetector />
+        </Suspense>
       </div>
     </EventProvider>
   )

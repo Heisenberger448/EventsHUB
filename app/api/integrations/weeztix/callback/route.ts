@@ -100,10 +100,10 @@ export async function GET(req: NextRequest) {
       },
     })
 
-    // Redirect back to integrations page
+    // Redirect back to org page — trigger event import modal
     return NextResponse.redirect(
       new URL(
-        `/${integration.organization.slug}/integrations?connected=weeztix`,
+        `/${integration.organization.slug}/dashboard?weeztixConnected=true`,
         baseUrl
       )
     )
@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
     console.error('Weeztix callback error:', error)
     return NextResponse.redirect(
       new URL(
-        `/${integration.organization.slug}/integrations?error=weeztix_callback_error`,
+        `/${integration.organization.slug}/dashboard?error=weeztix_callback_error`,
         baseUrl
       )
     )
