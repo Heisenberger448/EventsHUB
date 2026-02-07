@@ -275,7 +275,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
             </button>
           </div>
           <button
-            onClick={() => { setFormData({ title: '', description: '', sendDate: '' }); setFormError(''); setShowCreateModal(true) }}
+            onClick={() => { setFormData({ title: '', description: '', sendDate: '', rewardPoints: '' }); setFormError(''); setShowCreateModal(true) }}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-1.5"
           >
             <Plus className="h-4 w-4" />
