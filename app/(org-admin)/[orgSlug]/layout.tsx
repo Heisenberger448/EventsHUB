@@ -8,6 +8,67 @@ import TopBar from '@/components/org-admin/TopBar'
 import OnboardingWizard from '@/components/org-admin/OnboardingWizard'
 import CreateEventModal from '@/components/org-admin/CreateEventModal'
 import { EventProvider, useEventContext } from '@/contexts/EventContext'
+import { Ticket, PenLine, X } from 'lucide-react'
+
+/* ── Event Choice Modal (Connect Provider vs Add Manually) ── */
+function EventChoiceModal() {
+  const { showEventChoiceModal, setShowEventChoiceModal, setShowCreateModal } = useEventContext()
+  if (!showEventChoiceModal) return null
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={() => setShowEventChoiceModal(false)} />
+      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+        {/* close */}
+        <button
+          onClick={() => setShowEventChoiceModal(false)}
+          className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">Event toevoegen</h2>
+        <p className="text-sm text-gray-500 mb-6">Hoe wil je je event aanmaken?</p>
+
+        <div className="grid gap-3">
+          {/* Connect Ticket Provider */}
+          <button
+            onClick={() => {
+              setShowEventChoiceModal(false)
+              // TODO: navigate to ticket provider connection flow
+            }}
+            className="flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left group"
+          >
+            <div className="p-2.5 bg-blue-100 rounded-lg text-blue-600 group-hover:bg-blue-200 transition-colors">
+              <Ticket className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="font-medium text-gray-900 block mb-0.5">Connect Ticket Provider</span>
+              <span className="text-sm text-gray-500">Koppel Weeztix of een andere ticketprovider om events automatisch te importeren.</span>
+            </div>
+          </button>
+
+          {/* Add Manually */}
+          <button
+            onClick={() => {
+              setShowEventChoiceModal(false)
+              setShowCreateModal(true)
+            }}
+            className="flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-blue-300 hover:bg-blue-50/50 transition-all text-left group"
+          >
+            <div className="p-2.5 bg-gray-100 rounded-lg text-gray-600 group-hover:bg-gray-200 transition-colors">
+              <PenLine className="h-5 w-5" />
+            </div>
+            <div>
+              <span className="font-medium text-gray-900 block mb-0.5">Add Manually</span>
+              <span className="text-sm text-gray-500">Voeg een event handmatig toe met naam, datum en locatie.</span>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function EventModalWrapper({ orgSlug }: { orgSlug: string }) {
   const { showCreateModal, setShowCreateModal, refreshEvents, setSelectedEvent } = useEventContext()
@@ -86,6 +147,7 @@ export default function OrgSlugLayout({ children }: { children: ReactNode }) {
           <OnboardingWizard orgSlug={orgSlug} onClose={() => setShowOnboarding(false)} />
         )}
         <EventModalWrapper orgSlug={orgSlug} />
+        <EventChoiceModal />
       </div>
     </EventProvider>
   )

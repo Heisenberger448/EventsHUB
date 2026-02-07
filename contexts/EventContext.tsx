@@ -16,6 +16,8 @@ interface EventContextType {
   loading: boolean
   showCreateModal: boolean
   setShowCreateModal: (show: boolean) => void
+  showEventChoiceModal: boolean
+  setShowEventChoiceModal: (show: boolean) => void
   refreshEvents: () => Promise<void>
 }
 
@@ -26,6 +28,8 @@ const EventContext = createContext<EventContextType>({
   loading: true,
   showCreateModal: false,
   setShowCreateModal: () => {},
+  showEventChoiceModal: false,
+  setShowEventChoiceModal: () => {},
   refreshEvents: async () => {},
 })
 
@@ -38,6 +42,7 @@ export function EventProvider({ children }: { children: ReactNode }) {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showEventChoiceModal, setShowEventChoiceModal] = useState(false)
 
   const fetchEvents = async () => {
     try {
@@ -87,7 +92,7 @@ export function EventProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <EventContext.Provider value={{ events, selectedEvent, setSelectedEvent: handleSetSelectedEvent, loading, showCreateModal, setShowCreateModal, refreshEvents }}>
+    <EventContext.Provider value={{ events, selectedEvent, setSelectedEvent: handleSetSelectedEvent, loading, showCreateModal, setShowCreateModal, showEventChoiceModal, setShowEventChoiceModal, refreshEvents }}>
       {children}
     </EventContext.Provider>
   )

@@ -8,7 +8,7 @@ import { useEventContext } from '@/contexts/EventContext'
 export default function TopBar({ orgSlug, onOpenOnboarding }: { orgSlug: string; onOpenOnboarding?: () => void }) {
   const [supportOpen, setSupportOpen] = useState(false)
   const [eventOpen, setEventOpen] = useState(false)
-  const { events, selectedEvent, setSelectedEvent, setShowCreateModal } = useEventContext()
+  const { events, selectedEvent, setSelectedEvent, setShowEventChoiceModal } = useEventContext()
   const supportRef = useRef<HTMLDivElement>(null)
   const eventRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -90,7 +90,7 @@ export default function TopBar({ orgSlug, onOpenOnboarding }: { orgSlug: string;
                 <button
                   onClick={() => {
                     setEventOpen(false)
-                    setShowCreateModal(true)
+                    setShowEventChoiceModal(true)
                   }}
                   className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50 transition-colors font-medium"
                 >
