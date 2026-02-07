@@ -645,7 +645,7 @@ function EventChoiceModal() {
               </div>
             ) : (
               <button
-                onClick={() => setShowNewShopInput(true)}
+                onClick={() => { setShowNewShopInput(true); setNewShopName(`SharedCrowd X ${selectedWeeztixEvent?.name || ''}`) }}
                 className="w-full flex items-center gap-2.5 p-3 mb-3 border border-dashed border-gray-300 rounded-xl text-left hover:border-blue-300 hover:bg-blue-50/30 transition-all text-sm text-gray-600 hover:text-gray-900"
               >
                 <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
