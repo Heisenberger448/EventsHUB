@@ -81,6 +81,7 @@ model Event {
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   ambassadorEvents AmbassadorEvent[]
   campaigns      Campaign[]
+  rewards        Reward[]
   
   @@index([organizationId])
   @@index([slug])
@@ -151,14 +152,17 @@ model AmbassadorEvent {
 model Reward {
   id              String       @id @default(cuid())
   organizationId  String
+  eventId         String?
   name            String
   description     String
   pointsRequired  Int
   createdAt       DateTime     @default(now())
   
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event           Event?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
   
   @@index([organizationId])
+  @@index([eventId])
 }
 
 model WeeztixIntegration {

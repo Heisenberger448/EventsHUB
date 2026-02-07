@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { Gift, Plus, X } from 'lucide-react'
+import { useEventContext } from '@/contexts/EventContext'
 
 interface Reward {
   id: string
@@ -19,14 +20,17 @@ export default function RewardsPage({ params }: { params: { orgSlug: string } })
     pointsRequired: 0
   })
   const [loading, setLoading] = useState(false)
+  const { selectedEvent } = useEventContext()
 
   useEffect(() => {
     fetchRewards()
-  }, [])
+  }, [selectedEvent])
 
   const fetchRewards = async () => {
     try {
-      const res = await fetch(`/api/rewards?orgSlug=${params.orgSlug}`)
+      const queryParams = new URLSearchParams({ orgSlug: params.orgSlug })
+      if (selectedEvent) queryParams.set('eventId', selectedEvent.id)
+      const res = await fetch(`/api/rewards?${queryParams.toString()}`)
       if (res.ok) {
         const data = await res.json()
         setRewards(data)
@@ -46,7 +50,8 @@ export default function RewardsPage({ params }: { params: { orgSlug: string } })
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
-          orgSlug: params.orgSlug
+          orgSlug: params.orgSlug,
+          eventId: selectedEvent?.id || null
         })
       })
 
