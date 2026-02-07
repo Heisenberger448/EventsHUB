@@ -6,7 +6,23 @@ import { useRouter, useParams } from 'next/navigation'
 import Sidebar from '@/components/org-admin/Sidebar'
 import TopBar from '@/components/org-admin/TopBar'
 import OnboardingWizard from '@/components/org-admin/OnboardingWizard'
-import { EventProvider } from '@/contexts/EventContext'
+import CreateEventModal from '@/components/org-admin/CreateEventModal'
+import { EventProvider, useEventContext } from '@/contexts/EventContext'
+
+function EventModalWrapper({ orgSlug }: { orgSlug: string }) {
+  const { showCreateModal, setShowCreateModal, refreshEvents, setSelectedEvent } = useEventContext()
+  if (!showCreateModal) return null
+  return (
+    <CreateEventModal
+      orgSlug={orgSlug}
+      onClose={() => setShowCreateModal(false)}
+      onCreated={async (newEvent) => {
+        await refreshEvents()
+        setSelectedEvent(newEvent)
+      }}
+    />
+  )
+}
 
 export default function OrgSlugLayout({ children }: { children: ReactNode }) {
   const params = useParams()
@@ -69,6 +85,7 @@ export default function OrgSlugLayout({ children }: { children: ReactNode }) {
         {showOnboarding && (
           <OnboardingWizard orgSlug={orgSlug} onClose={() => setShowOnboarding(false)} />
         )}
+        <EventModalWrapper orgSlug={orgSlug} />
       </div>
     </EventProvider>
   )
