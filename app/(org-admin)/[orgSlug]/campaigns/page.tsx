@@ -1,9 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   Search,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Plus,
   Mail,
   MoreVertical,
@@ -13,6 +15,7 @@ import {
   SlidersHorizontal,
   MoreHorizontal,
   Target,
+  CheckCircle2,
 } from 'lucide-react'
 
 /* ── types ─────────────────────────────────────────────────── */
@@ -97,6 +100,46 @@ const statusStyle: Record<string, { bg: string; text: string }> = {
   Scheduled: { bg: 'bg-blue-50', text: 'text-blue-700' },
 }
 
+/* ── date helpers ──────────────────────────────────────────── */
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+const SHORT_MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+]
+
+/** Parse the display sendDate string like "Feb 2, 2026" into a Date */
+function parseSendDate(s: string): Date | null {
+  if (!s) return null
+  const d = new Date(s)
+  return isNaN(d.getTime()) ? null : d
+}
+
+function startOfWeek(d: Date): Date {
+  const copy = new Date(d)
+  copy.setDate(copy.getDate() - copy.getDay()) // Sunday
+  copy.setHours(0, 0, 0, 0)
+  return copy
+}
+
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+}
+
+function formatWeekRange(weekStart: Date): string {
+  const end = new Date(weekStart)
+  end.setDate(end.getDate() + 6)
+  const sm = SHORT_MONTHS[weekStart.getMonth()]
+  const em = SHORT_MONTHS[end.getMonth()]
+  if (weekStart.getMonth() === end.getMonth()) {
+    return `${sm} ${weekStart.getDate()} – ${end.getDate()}, ${weekStart.getFullYear()}`
+  }
+  return `${sm} ${weekStart.getDate()} – ${em} ${end.getDate()}, ${end.getFullYear()}`
+}
+
 /* ── page ──────────────────────────────────────────────────── */
 export default function CampaignsPage({ params }: { params: { orgSlug: string } }) {
   const [campaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS)
@@ -104,6 +147,9 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
   const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const [calendarMode, setCalendarMode] = useState<'week' | 'month'>('month')
+  const [currentDate, setCurrentDate] = useState(new Date())
+  const today = useMemo(() => new Date(), [])
 
   /* filter */
   const filtered = campaigns.filter(
@@ -127,6 +173,62 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
     next.has(id) ? next.delete(id) : next.add(id)
     setSelectedIds(next)
   }
+
+  /* ── calendar navigation ──────────────────────── */
+  const goToday = () => setCurrentDate(new Date())
+
+  const goPrev = () => {
+    const d = new Date(currentDate)
+    if (calendarMode === 'week') d.setDate(d.getDate() - 7)
+    else d.setMonth(d.getMonth() - 1)
+    setCurrentDate(d)
+  }
+
+  const goNext = () => {
+    const d = new Date(currentDate)
+    if (calendarMode === 'week') d.setDate(d.getDate() + 7)
+    else d.setMonth(d.getMonth() + 1)
+    setCurrentDate(d)
+  }
+
+  /* campaigns mapped by date string YYYY-MM-DD */
+  const campaignsByDate = useMemo(() => {
+    const map: Record<string, Campaign[]> = {}
+    campaigns.forEach((c) => {
+      const d = parseSendDate(c.sendDate)
+      if (!d) return
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+      ;(map[key] ||= []).push(c)
+    })
+    return map
+  }, [campaigns])
+
+  const dateKey = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+  /* ── week grid ────────────────────────────────── */
+  const weekStart = startOfWeek(currentDate)
+  const weekDays = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart)
+    d.setDate(d.getDate() + i)
+    return d
+  })
+  const HOURS = Array.from({ length: 16 }, (_, i) => i + 7) // 7 am – 10 pm
+
+  /* ── month grid ───────────────────────────────── */
+  const monthGridDates = useMemo(() => {
+    const first = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1)
+    const last = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0)
+    const gridStart = startOfWeek(first)
+    const dates: Date[] = []
+    const cursor = new Date(gridStart)
+    // always 6 rows
+    while (dates.length < 42) {
+      dates.push(new Date(cursor))
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    return dates
+  }, [currentDate])
 
   return (
     <div className="p-8">
@@ -172,7 +274,201 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
         </div>
       </div>
 
-      {/* ── Filter bar ──────────────────────────────── */}
+      {/* ── CALENDAR VIEW ─────────────────────────── */}
+      {viewMode === 'calendar' && (
+        <>
+          {/* Calendar toolbar */}
+          <div className="flex flex-wrap items-center gap-3 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 min-w-[180px]">
+              {calendarMode === 'week'
+                ? formatWeekRange(weekStart)
+                : `${MONTH_NAMES[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
+            </h2>
+
+            <button onClick={goPrev} className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button onClick={goNext} className="p-1.5 rounded hover:bg-gray-100 text-gray-500">
+              <ChevronRight className="h-5 w-5" />
+            </button>
+
+            <button
+              onClick={goToday}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              Today
+            </button>
+
+            {/* Week / Month toggle */}
+            <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setCalendarMode('week')}
+                className={`px-3 py-1.5 text-sm font-medium ${
+                  calendarMode === 'week' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Week
+              </button>
+              <button
+                onClick={() => setCalendarMode('month')}
+                className={`px-3 py-1.5 text-sm font-medium border-l border-gray-300 ${
+                  calendarMode === 'month' ? 'bg-gray-100 text-gray-900' : 'bg-white text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                Month
+              </button>
+            </div>
+
+            {/* filter chips */}
+            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+              Campaigns <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+              Audience <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+              Channels <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            <button className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+              Status <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+            <button className="p-1.5 border border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50">
+              <Filter className="h-4 w-4" />
+            </button>
+
+            <div className="flex-1" />
+
+            <button className="p-2 text-gray-500 hover:text-gray-700">
+              <MoreVertical className="h-4 w-4" />
+            </button>
+            <button className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+              Plan campaigns
+            </button>
+          </div>
+
+          {/* ── WEEK VIEW ────────────────────────── */}
+          {calendarMode === 'week' && (
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              {/* day headers */}
+              <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-gray-200">
+                <div />
+                {weekDays.map((d, i) => {
+                  const isToday = isSameDay(d, today)
+                  return (
+                    <div key={i} className="text-center py-3 border-l border-gray-100">
+                      <span className="text-xs font-medium text-gray-500">{DAY_NAMES[d.getDay()]}</span>
+                      <span
+                        className={`ml-1.5 inline-flex items-center justify-center text-sm font-semibold ${
+                          isToday
+                            ? 'bg-gray-900 text-white rounded-full w-7 h-7'
+                            : 'text-gray-700'
+                        }`}
+                      >
+                        {String(d.getDate()).padStart(2, '0')}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* all-day row */}
+              <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-gray-200">
+                <div className="text-xs text-gray-400 pr-2 text-right py-2">all-day</div>
+                {weekDays.map((d, i) => {
+                  const items = campaignsByDate[dateKey(d)] || []
+                  return (
+                    <div key={i} className="border-l border-gray-100 py-1 px-1 min-h-[32px]">
+                      {items.map((c) => (
+                        <div
+                          key={c.id}
+                          className="flex items-center gap-1 text-xs bg-white border border-gray-200 rounded px-1.5 py-0.5 truncate mb-0.5"
+                        >
+                          <span className="truncate">{c.title.length > 14 ? c.title.slice(0, 14) + '...' : c.title}</span>
+                          <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                          {c.status === 'Sent' && <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* hour rows */}
+              <div className="max-h-[520px] overflow-y-auto">
+                {HOURS.map((h) => (
+                  <div key={h} className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-gray-50 min-h-[56px]">
+                    <div className="text-xs text-gray-400 pr-2 text-right pt-1">
+                      {h === 0 ? '12 am' : h < 12 ? `${h} am` : h === 12 ? '12 pm' : `${h - 12} pm`}
+                    </div>
+                    {weekDays.map((_, i) => (
+                      <div key={i} className="border-l border-gray-100" />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── MONTH VIEW ───────────────────────── */}
+          {calendarMode === 'month' && (
+            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              {/* day headers */}
+              <div className="grid grid-cols-7 border-b border-gray-200">
+                {DAY_NAMES.map((dn) => (
+                  <div key={dn} className="text-center py-2 text-xs font-semibold text-gray-500">
+                    {dn}
+                  </div>
+                ))}
+              </div>
+
+              {/* date cells – 6 rows */}
+              <div className="grid grid-cols-7">
+                {monthGridDates.map((d, i) => {
+                  const inMonth = d.getMonth() === currentDate.getMonth()
+                  const isToday = isSameDay(d, today)
+                  const items = campaignsByDate[dateKey(d)] || []
+                  return (
+                    <div
+                      key={i}
+                      className={`border-b border-r border-gray-100 min-h-[90px] p-1.5 ${
+                        !inMonth ? 'bg-gray-50/50' : ''
+                      }`}
+                    >
+                      <span
+                        className={`inline-flex items-center justify-center text-sm mb-1 ${
+                          isToday
+                            ? 'bg-gray-900 text-white rounded-full w-7 h-7 font-semibold'
+                            : inMonth
+                            ? 'text-gray-700 font-medium'
+                            : 'text-gray-300'
+                        }`}
+                      >
+                        {d.getDate()}
+                      </span>
+                      {items.map((c) => (
+                        <div
+                          key={c.id}
+                          className="flex items-center gap-1 text-xs bg-white border border-gray-200 rounded px-1.5 py-0.5 truncate mb-0.5 cursor-pointer hover:bg-gray-50"
+                        >
+                          <span className="truncate">
+                            {c.title.length > 12 ? c.title.slice(0, 12) + '...' : c.title}
+                          </span>
+                          <Mail className="h-3 w-3 text-gray-400 shrink-0" />
+                          {c.status === 'Sent' && <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── LIST VIEW: Filter bar ───────────────────── */}
+      {viewMode === 'list' && (
+        <>
       <div className="flex flex-wrap items-end gap-3 mb-6">
         {/* Search */}
         <div className="relative">
@@ -406,6 +702,8 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           </tbody>
         </table>
       </div>
+        </>
+      )}
     </div>
   )
 }
