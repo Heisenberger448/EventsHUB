@@ -6,6 +6,7 @@ import {
   LayoutDashboard, 
   Users, 
   Send, 
+  Workflow,
   Link as LinkIcon,
   ChevronDown,
   ChevronUp,
@@ -50,6 +51,13 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
       href: `/${orgSlug}/campaigns`,
       icon: Send,
       current: pathname === `/${orgSlug}/campaigns`,
+      group: 'main'
+    },
+    {
+      name: 'Flows',
+      href: `/${orgSlug}/flows`,
+      icon: Workflow,
+      current: pathname === `/${orgSlug}/flows`,
       group: 'main'
     },
     {
