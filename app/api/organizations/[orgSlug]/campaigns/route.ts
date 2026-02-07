@@ -19,11 +19,15 @@ export async function GET(
     }
 
     // Get all campaigns for this organization's events
+    const url = new URL(req.url)
+    const eventId = url.searchParams.get('eventId')
+
     const campaigns = await prisma.campaign.findMany({
       where: {
         event: {
           organizationId: organization.id
-        }
+        },
+        ...(eventId ? { eventId } : {}),
       },
       include: {
         event: {

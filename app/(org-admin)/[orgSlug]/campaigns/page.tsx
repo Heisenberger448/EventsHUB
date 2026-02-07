@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import {
   Search,
   ChevronDown,
@@ -16,84 +16,25 @@ import {
   MoreHorizontal,
   Target,
   CheckCircle2,
+  X,
+  Loader2,
 } from 'lucide-react'
+import { useEventContext } from '@/contexts/EventContext'
 
 /* ── types ─────────────────────────────────────────────────── */
 interface Campaign {
   id: string
   title: string
-  audience: string
-  messageType: 'email' | 'A/B'
-  status: 'Sent' | 'Draft' | 'Scheduled'
-  sendDate: string
-  sendTime: string
-  openRate: number
-  openRecipients: number
-  clickRate: number
-  clickRecipients: number
-  revenue: number
-  revenueRecipients: number
+  description: string
+  startDate: string
+  endDate: string
+  status: string
+  rewardPoints: number
+  event: { id: string; name: string; slug: string }
+  _count: { completions: number }
 }
 
-/* ── mock data ─────────────────────────────────────────────── */
-const MOCK_CAMPAIGNS: Campaign[] = [
-  {
-    id: '1',
-    title: 'Post email MOAB 100150',
-    audience: 'Openers MOAB 100150 (Valentijn 2026)',
-    messageType: 'email',
-    status: 'Sent',
-    sendDate: 'Feb 2, 2026',
-    sendTime: '7:30 PM',
-    openRate: 85.20,
-    openRecipients: 7910,
-    clickRate: 3.37,
-    clickRecipients: 313,
-    revenue: 434.90,
-    revenueRecipients: 6,
-  },
-  {
-    id: '2',
-    title: 'MOAB 100150 (Valentijn 2026)',
-    audience: 'Signup, SMS Subscribers, Wallfield old custo...',
-    messageType: 'A/B',
-    status: 'Sent',
-    sendDate: 'Feb 1, 2026',
-    sendTime: '8:22 PM GMT+1',
-    openRate: 39.44,
-    openRecipients: 11549,
-    clickRate: 3.10,
-    clickRecipients: 907,
-    revenue: 479.75,
-    revenueRecipients: 4,
-  },
-  {
-    id: '3',
-    title: 'Welcome Series Launch',
-    audience: 'New Subscribers',
-    messageType: 'email',
-    status: 'Draft',
-    sendDate: '',
-    sendTime: '',
-    openRate: 0,
-    openRecipients: 0,
-    clickRate: 0,
-    clickRecipients: 0,
-    revenue: 0,
-    revenueRecipients: 0,
-  },
-]
-
 /* ── helpers ───────────────────────────────────────────────── */
-const euro = (n: number) =>
-  `€${n.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-
-const pct = (n: number) =>
-  `${n.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
-
-const recipientLabel = (n: number) =>
-  `${n.toLocaleString('nl-NL')} recipient${n !== 1 ? 's' : ''}`
-
 const statusStyle: Record<string, { bg: string; text: string }> = {
   Sent: { bg: 'bg-green-50', text: 'text-green-700' },
   Draft: { bg: 'bg-gray-100', text: 'text-gray-600' },
@@ -142,7 +83,9 @@ function formatWeekRange(weekStart: Date): string {
 
 /* ── page ──────────────────────────────────────────────────── */
 export default function CampaignsPage({ params }: { params: { orgSlug: string } }) {
-  const [campaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS)
+  const { selectedEvent } = useEventContext()
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
@@ -151,11 +94,75 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [currentDate, setCurrentDate] = useState(new Date())
   const today = useMemo(() => new Date(), [])
 
+  /* ── create modal state ───────────────────────── */
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [formData, setFormData] = useState({ title: '', description: '', sendDate: '' })
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState('')
+
+  /* ── fetch campaigns ──────────────────────────── */
+  const fetchCampaigns = useCallback(async () => {
+    setLoading(true)
+    try {
+      const qs = selectedEvent ? `?eventId=${selectedEvent.id}` : ''
+      const res = await fetch(`/api/organizations/${params.orgSlug}/campaigns${qs}`)
+      if (res.ok) {
+        const data = await res.json()
+        setCampaigns(Array.isArray(data) ? data : [])
+      }
+    } catch (err) {
+      console.error('Failed to fetch campaigns', err)
+    } finally {
+      setLoading(false)
+    }
+  }, [params.orgSlug, selectedEvent])
+
+  useEffect(() => {
+    fetchCampaigns()
+  }, [fetchCampaigns])
+
+  /* ── create campaign ──────────────────────────── */
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedEvent) {
+      setFormError('Selecteer eerst een event in de topbar.')
+      return
+    }
+    setSubmitting(true)
+    setFormError('')
+    try {
+      const res = await fetch(`/api/organizations/${params.orgSlug}/campaigns`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          eventId: selectedEvent.id,
+          title: formData.title,
+          description: formData.description,
+          startDate: formData.sendDate,
+          endDate: formData.sendDate,
+          rewardPoints: 0,
+          status: 'DRAFT',
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Aanmaken mislukt')
+      }
+      setShowCreateModal(false)
+      setFormData({ title: '', description: '', sendDate: '' })
+      fetchCampaigns()
+    } catch (err: any) {
+      setFormError(err.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   /* filter */
   const filtered = campaigns.filter(
     (c) =>
       c.title.toLowerCase().includes(search.toLowerCase()) ||
-      c.audience.toLowerCase().includes(search.toLowerCase())
+      c.description.toLowerCase().includes(search.toLowerCase())
   )
 
   const allSelected = filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id))
@@ -195,7 +202,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const campaignsByDate = useMemo(() => {
     const map: Record<string, Campaign[]> = {}
     campaigns.forEach((c) => {
-      const d = parseSendDate(c.sendDate)
+      const d = parseSendDate(c.startDate)
       if (!d) return
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
       ;(map[key] ||= []).push(c)
@@ -267,12 +274,122 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
               Calendar
             </button>
           </div>
-          <button className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-1.5">
+          <button
+            onClick={() => { setFormData({ title: '', description: '', sendDate: '' }); setFormError(''); setShowCreateModal(true) }}
+            className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-1.5"
+          >
             <Plus className="h-4 w-4" />
             Create campaign
           </button>
         </div>
       </div>
+
+      {/* ── Create Campaign Modal ──────────────────── */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+            {/* header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Nieuwe campaign</h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* body */}
+            <form onSubmit={handleCreate} className="p-6 space-y-5">
+              {/* Event badge */}
+              {selectedEvent ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+                  <Calendar className="h-4 w-4" />
+                  Event: <span className="font-medium">{selectedEvent.name}</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
+                  Selecteer eerst een event in de topbar om een campaign aan te maken.
+                </div>
+              )}
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Campaign naam <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Bijv. Valentijnsdag Promo"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Beschrijving <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Beschrijf de campaign..."
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  rows={3}
+                  required
+                />
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Verzenddatum <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={formData.sendDate}
+                  onChange={(e) => setFormData({ ...formData, sendDate: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
+                />
+              </div>
+
+              {/* Error */}
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">{formError}</p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200"
+                >
+                  Annuleren
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting || !selectedEvent}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Aanmaken...
+                    </>
+                  ) : (
+                    'Campaign aanmaken'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ── CALENDAR VIEW ─────────────────────────── */}
       {viewMode === 'calendar' && (
@@ -385,7 +502,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                         >
                           <span className="truncate">{c.title.length > 14 ? c.title.slice(0, 14) + '...' : c.title}</span>
                           <Mail className="h-3 w-3 text-gray-400 shrink-0" />
-                          {c.status === 'Sent' && <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />}
+                          {c.status === 'ACTIVE' && <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />}
                         </div>
                       ))}
                     </div>
@@ -454,7 +571,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                             {c.title.length > 12 ? c.title.slice(0, 12) + '...' : c.title}
                           </span>
                           <Mail className="h-3 w-3 text-gray-400 shrink-0" />
-                          {c.status === 'Sent' && <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />}
+                          {c.status === 'ACTIVE' && <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />}
                         </div>
                       ))}
                     </div>
@@ -544,26 +661,33 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 />
               </th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Campaign</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Message type</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Event</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Send date</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-600">Open rate</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-600">Click rate</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-600">Fulfilled Order</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-600">Completions</th>
               <th className="w-10" />
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filtered.length === 0 ? (
+            {loading ? (
               <tr>
-                <td colSpan={9} className="text-center py-16">
+                <td colSpan={7} className="text-center py-16 text-gray-500">
+                  <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400 mb-2" />
+                  Loading...
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="text-center py-16">
                   <Target className="mx-auto h-10 w-10 text-gray-300 mb-3" />
-                  <p className="text-gray-500 text-sm">No campaigns found.</p>
+                  <p className="text-gray-500 text-sm">
+                    {selectedEvent ? 'Geen campaigns gevonden voor dit event.' : 'Geen campaigns gevonden.'}
+                  </p>
                 </td>
               </tr>
             ) : (
               filtered.map((c) => {
-                const st = statusStyle[c.status] || statusStyle.Draft
+                const st = statusStyle[c.status] || statusStyle.DRAFT
                 return (
                   <tr key={c.id} className="hover:bg-gray-50 group">
                     {/* checkbox */}
@@ -576,32 +700,23 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                       />
                     </td>
 
-                    {/* name + audience */}
+                    {/* name + description */}
                     <td className="px-4 py-4 max-w-sm">
                       <button className="text-left">
                         <span className="text-blue-600 hover:underline font-medium block leading-snug">
                           {c.title}
                         </span>
-                        <span className="text-gray-400 text-xs line-clamp-1">{c.audience}</span>
+                        <span className="text-gray-400 text-xs line-clamp-1">{c.description}</span>
                       </button>
                     </td>
 
-                    {/* message type */}
-                    <td className="px-4 py-4">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        {c.messageType === 'A/B' && (
-                          <span className="text-xs font-medium text-gray-500 border border-gray-300 rounded px-1.5 py-0.5">
-                            A/B
-                          </span>
-                        )}
-                      </div>
-                    </td>
+                    {/* event */}
+                    <td className="px-4 py-4 text-gray-600">{c.event?.name || '—'}</td>
 
                     {/* status */}
                     <td className="px-4 py-4">
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${st.bg} ${st.text}`}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${st?.bg || 'bg-gray-100'} ${st?.text || 'text-gray-600'}`}
                       >
                         {c.status}
                       </span>
@@ -609,50 +724,18 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
                     {/* send date */}
                     <td className="px-4 py-4 whitespace-nowrap">
-                      {c.sendDate ? (
-                        <div>
-                          <span className="text-gray-900 font-medium block">{c.sendDate}</span>
-                          <span className="text-gray-400 text-xs">{c.sendTime}</span>
-                        </div>
+                      {c.startDate ? (
+                        <span className="text-gray-900 font-medium">
+                          {new Date(c.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
                       ) : (
                         <span className="text-gray-400">—</span>
                       )}
                     </td>
 
-                    {/* open rate */}
-                    <td className="px-4 py-4 text-right">
-                      {c.openRate > 0 ? (
-                        <div>
-                          <span className="text-green-600 font-medium block">{pct(c.openRate)}</span>
-                          <span className="text-gray-400 text-xs">{recipientLabel(c.openRecipients)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-
-                    {/* click rate */}
-                    <td className="px-4 py-4 text-right">
-                      {c.clickRate > 0 ? (
-                        <div>
-                          <span className="text-green-600 font-medium block">{pct(c.clickRate)}</span>
-                          <span className="text-gray-400 text-xs">{recipientLabel(c.clickRecipients)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">—</span>
-                      )}
-                    </td>
-
-                    {/* fulfilled order / revenue */}
-                    <td className="px-4 py-4 text-right">
-                      {c.revenue > 0 ? (
-                        <div>
-                          <span className="text-blue-600 font-medium block">{euro(c.revenue)}</span>
-                          <span className="text-gray-400 text-xs">{recipientLabel(c.revenueRecipients)}</span>
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">{euro(0)}</span>
-                      )}
+                    {/* completions */}
+                    <td className="px-4 py-4 text-right text-gray-600">
+                      {c._count?.completions || 0}
                     </td>
 
                     {/* 3-dots */}
@@ -678,12 +761,6 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                             >
                               Duplicate
-                            </button>
-                            <button
-                              onClick={() => setOpenMenu(null)}
-                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                            >
-                              Archive
                             </button>
                             <button
                               onClick={() => setOpenMenu(null)}
