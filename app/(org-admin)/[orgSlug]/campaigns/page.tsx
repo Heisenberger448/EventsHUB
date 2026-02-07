@@ -1,312 +1,411 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Calendar, Target, Award, CheckCircle, Clock, Archive } from 'lucide-react'
+import { useState } from 'react'
+import {
+  Search,
+  ChevronDown,
+  Plus,
+  Mail,
+  MoreVertical,
+  List,
+  Calendar,
+  Filter,
+  SlidersHorizontal,
+  MoreHorizontal,
+  Target,
+} from 'lucide-react'
 
-interface Event {
-  id: string
-  name: string
-  slug: string
-}
-
+/* ── types ─────────────────────────────────────────────────── */
 interface Campaign {
   id: string
   title: string
-  description: string
-  startDate: string
-  endDate: string
-  rewardPoints: number
-  status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED'
-  event: Event
-  _count: {
-    completions: number
-  }
+  audience: string
+  messageType: 'email' | 'A/B'
+  status: 'Sent' | 'Draft' | 'Scheduled'
+  sendDate: string
+  sendTime: string
+  openRate: number
+  openRecipients: number
+  clickRate: number
+  clickRecipients: number
+  revenue: number
+  revenueRecipients: number
 }
 
+/* ── mock data ─────────────────────────────────────────────── */
+const MOCK_CAMPAIGNS: Campaign[] = [
+  {
+    id: '1',
+    title: 'Post email MOAB 100150',
+    audience: 'Openers MOAB 100150 (Valentijn 2026)',
+    messageType: 'email',
+    status: 'Sent',
+    sendDate: 'Feb 2, 2026',
+    sendTime: '7:30 PM',
+    openRate: 85.20,
+    openRecipients: 7910,
+    clickRate: 3.37,
+    clickRecipients: 313,
+    revenue: 434.90,
+    revenueRecipients: 6,
+  },
+  {
+    id: '2',
+    title: 'MOAB 100150 (Valentijn 2026)',
+    audience: 'Signup, SMS Subscribers, Wallfield old custo...',
+    messageType: 'A/B',
+    status: 'Sent',
+    sendDate: 'Feb 1, 2026',
+    sendTime: '8:22 PM GMT+1',
+    openRate: 39.44,
+    openRecipients: 11549,
+    clickRate: 3.10,
+    clickRecipients: 907,
+    revenue: 479.75,
+    revenueRecipients: 4,
+  },
+  {
+    id: '3',
+    title: 'Welcome Series Launch',
+    audience: 'New Subscribers',
+    messageType: 'email',
+    status: 'Draft',
+    sendDate: '',
+    sendTime: '',
+    openRate: 0,
+    openRecipients: 0,
+    clickRate: 0,
+    clickRecipients: 0,
+    revenue: 0,
+    revenueRecipients: 0,
+  },
+]
+
+/* ── helpers ───────────────────────────────────────────────── */
+const euro = (n: number) =>
+  `€${n.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+const pct = (n: number) =>
+  `${n.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`
+
+const recipientLabel = (n: number) =>
+  `${n.toLocaleString('nl-NL')} recipient${n !== 1 ? 's' : ''}`
+
+const statusStyle: Record<string, { bg: string; text: string }> = {
+  Sent: { bg: 'bg-green-50', text: 'text-green-700' },
+  Draft: { bg: 'bg-gray-100', text: 'text-gray-600' },
+  Scheduled: { bg: 'bg-blue-50', text: 'text-blue-700' },
+}
+
+/* ── page ──────────────────────────────────────────────────── */
 export default function CampaignsPage({ params }: { params: { orgSlug: string } }) {
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
-  const [showCreateForm, setShowCreateForm] = useState(false)
-  const [formData, setFormData] = useState({
-    eventId: '',
-    title: '',
-    description: '',
-    startDate: '',
-    endDate: '',
-    rewardPoints: 100,
-    status: 'DRAFT' as const
-  })
+  const [campaigns] = useState<Campaign[]>(MOCK_CAMPAIGNS)
+  const [search, setSearch] = useState('')
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list')
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
 
-  const fetchData = async () => {
-    try {
-      // Fetch campaigns
-      const campaignsRes = await fetch(`/api/organizations/${params.orgSlug}/campaigns`)
-      const campaignsData = await campaignsRes.json()
-      
-      // Ensure it's an array
-      if (Array.isArray(campaignsData)) {
-        setCampaigns(campaignsData)
-      } else {
-        console.error('Campaigns data is not an array:', campaignsData)
-        setCampaigns([])
-      }
+  /* filter */
+  const filtered = campaigns.filter(
+    (c) =>
+      c.title.toLowerCase().includes(search.toLowerCase()) ||
+      c.audience.toLowerCase().includes(search.toLowerCase())
+  )
 
-      // Fetch events
-      const eventsRes = await fetch('/api/events')
-      const eventsData = await eventsRes.json()
-      
-      if (Array.isArray(eventsData)) {
-        setEvents(eventsData)
-      } else {
-        console.error('Events data is not an array:', eventsData)
-        setEvents([])
-      }
-    } catch (error) {
-      console.error('Error fetching data:', error)
-      setCampaigns([])
-      setEvents([])
-    } finally {
-      setLoading(false)
+  const allSelected = filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id))
+
+  const toggleAll = () => {
+    if (allSelected) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filtered.map((c) => c.id)))
     }
   }
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData, params.orgSlug])
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    try {
-      const res = await fetch(`/api/organizations/${params.orgSlug}/campaigns`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      })
-
-      if (res.ok) {
-        setShowCreateForm(false)
-        setFormData({
-          eventId: '',
-          title: '',
-          description: '',
-          startDate: '',
-          endDate: '',
-          rewardPoints: 100,
-          status: 'DRAFT'
-        })
-        fetchData()
-      }
-    } catch (error) {
-      console.error('Error creating campaign:', error)
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE': return 'bg-green-100 text-green-800'
-      case 'DRAFT': return 'bg-gray-100 text-gray-800'
-      case 'COMPLETED': return 'bg-blue-100 text-blue-800'
-      case 'ARCHIVED': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'ACTIVE': return <CheckCircle className="h-4 w-4" />
-      case 'DRAFT': return <Clock className="h-4 w-4" />
-      case 'COMPLETED': return <CheckCircle className="h-4 w-4" />
-      case 'ARCHIVED': return <Archive className="h-4 w-4" />
-      default: return null
-    }
+  const toggleOne = (id: string) => {
+    const next = new Set(selectedIds)
+    next.has(id) ? next.delete(id) : next.add(id)
+    setSelectedIds(next)
   }
 
   return (
-    <div className="space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Campagnes</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Creëer taken voor ambassadors en beloon ze met punten
-            </p>
+    <div className="p-8">
+      {/* ── Header ──────────────────────────────────── */}
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Campaigns</h1>
+        <div className="flex items-center gap-3">
+          <button className="p-2 text-gray-500 hover:text-gray-700">
+            <MoreHorizontal className="h-5 w-5" />
+          </button>
+          <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+            View library
+          </button>
+          {/* List / Calendar toggle */}
+          <div className="flex border border-gray-300 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium ${
+                viewMode === 'list'
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              List
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-l border-gray-300 ${
+                viewMode === 'calendar'
+                  ? 'bg-gray-100 text-gray-900'
+                  : 'bg-white text-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Calendar className="h-4 w-4" />
+              Calendar
+            </button>
           </div>
-          <button
-            onClick={() => setShowCreateForm(true)}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="h-5 w-5 mr-2" />
-            Nieuwe Campagne
+          <button className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-1.5">
+            <Plus className="h-4 w-4" />
+            Create campaign
+          </button>
+        </div>
+      </div>
+
+      {/* ── Filter bar ──────────────────────────────── */}
+      <div className="flex flex-wrap items-end gap-3 mb-6">
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search campaigns"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm w-56 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        {/* Date range */}
+        <div>
+          <span className="block text-xs text-gray-500 mb-1">Date range</span>
+          <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+            <Calendar className="h-3.5 w-3.5" />
+            Last 30 days
+            <ChevronDown className="h-3.5 w-3.5" />
           </button>
         </div>
 
-        {/* Create Form Modal */}
-        {showCreateForm && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-              <h2 className="text-2xl font-bold mb-4">Nieuwe Campagne</h2>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Evenement</label>
-                  <select
-                    required
-                    value={formData.eventId}
-                    onChange={(e) => setFormData({ ...formData, eventId: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                    <option value="">Selecteer een evenement</option>
-                    {events.map(event => (
-                      <option key={event.id} value={event.id}>{event.name}</option>
-                    ))}
-                  </select>
-                </div>
+        {/* Filter chips */}
+        <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+          Audience
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+        <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+          Channels
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+        <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+          Status
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+        <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+          Tags
+          <ChevronDown className="h-3.5 w-3.5" />
+        </button>
+        <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+          A/B test
+        </button>
+        <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+          Archived
+        </button>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Titel</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    placeholder="Bijv. Deel op Social Media"
-                  />
-                </div>
+        {/* Filter icon */}
+        <button className="p-2 border border-gray-300 rounded-lg text-gray-500 hover:bg-gray-50">
+          <Filter className="h-4 w-4" />
+        </button>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Beschrijving</label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    placeholder="Beschrijf wat ambassadors moeten doen..."
-                  />
-                </div>
+        {/* spacer */}
+        <div className="flex-1" />
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Startdatum</label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.startDate}
-                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
+        {/* Settings icon */}
+        <button className="p-2 text-gray-500 hover:text-gray-700">
+          <SlidersHorizontal className="h-4 w-4" />
+        </button>
+      </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Einddatum</label>
-                    <input
-                      type="date"
-                      required
-                      value={formData.endDate}
-                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                      className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
+      {/* ── Table ───────────────────────────────────── */}
+      <div className="bg-white border border-gray-200 rounded-lg overflow-visible">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="w-10 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={toggleAll}
+                  className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+              </th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Campaign</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Message type</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Send date</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-600">Open rate</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-600">Click rate</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-600">Fulfilled Order</th>
+              <th className="w-10" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="text-center py-16">
+                  <Target className="mx-auto h-10 w-10 text-gray-300 mb-3" />
+                  <p className="text-gray-500 text-sm">No campaigns found.</p>
+                </td>
+              </tr>
+            ) : (
+              filtered.map((c) => {
+                const st = statusStyle[c.status] || statusStyle.Draft
+                return (
+                  <tr key={c.id} className="hover:bg-gray-50 group">
+                    {/* checkbox */}
+                    <td className="px-4 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(c.id)}
+                        onChange={() => toggleOne(c.id)}
+                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Reward Punten</label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={formData.rewardPoints}
-                    onChange={(e) => setFormData({ ...formData, rewardPoints: parseInt(e.target.value) })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
+                    {/* name + audience */}
+                    <td className="px-4 py-4 max-w-sm">
+                      <button className="text-left">
+                        <span className="text-blue-600 hover:underline font-medium block leading-snug">
+                          {c.title}
+                        </span>
+                        <span className="text-gray-400 text-xs line-clamp-1">{c.audience}</span>
+                      </button>
+                    </td>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  >
-                    <option value="DRAFT">Concept</option>
-                    <option value="ACTIVE">Actief</option>
-                  </select>
-                </div>
+                    {/* message type */}
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-gray-400" />
+                        {c.messageType === 'A/B' && (
+                          <span className="text-xs font-medium text-gray-500 border border-gray-300 rounded px-1.5 py-0.5">
+                            A/B
+                          </span>
+                        )}
+                      </div>
+                    </td>
 
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateForm(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Annuleren
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
-                  >
-                    Campagne Aanmaken
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+                    {/* status */}
+                    <td className="px-4 py-4">
+                      <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${st.bg} ${st.text}`}
+                      >
+                        {c.status}
+                      </span>
+                    </td>
 
-        {/* Campaigns List */}
-        {loading ? (
-          <div className="text-center py-12">Laden...</div>
-        ) : campaigns.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
-            <Target className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Geen campagnes</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Begin met het aanmaken van een campagne voor je ambassadors
-            </p>
-          </div>
-        ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {campaigns.map((campaign) => (
-              <div key={campaign.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-start justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900">{campaign.title}</h3>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(campaign.status)}`}>
-                    {getStatusIcon(campaign.status)}
-                    <span className="ml-1">{campaign.status}</span>
-                  </span>
-                </div>
-                
-                <p className="mt-2 text-sm text-gray-600 line-clamp-2">{campaign.description}</p>
-                
-                <div className="mt-4 space-y-2">
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Target className="h-4 w-4 mr-2" />
-                    {campaign.event.name}
-                  </div>
-                  
-                  <div className="flex items-center text-sm text-gray-500">
-                    <Calendar className="h-4 w-4 mr-2" />
-                    {new Date(campaign.startDate).toLocaleDateString('nl-NL')} - {new Date(campaign.endDate).toLocaleDateString('nl-NL')}
-                  </div>
-                  
-                  <div className="flex items-center text-sm font-medium text-green-600">
-                    <Award className="h-4 w-4 mr-2" />
-                    {campaign.rewardPoints} punten
-                  </div>
-                </div>
+                    {/* send date */}
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {c.sendDate ? (
+                        <div>
+                          <span className="text-gray-900 font-medium block">{c.sendDate}</span>
+                          <span className="text-gray-400 text-xs">{c.sendTime}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
 
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <p className="text-sm text-gray-500">
-                    {campaign._count.completions} {campaign._count.completions === 1 ? 'voltooiing' : 'voltooiingen'}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+                    {/* open rate */}
+                    <td className="px-4 py-4 text-right">
+                      {c.openRate > 0 ? (
+                        <div>
+                          <span className="text-green-600 font-medium block">{pct(c.openRate)}</span>
+                          <span className="text-gray-400 text-xs">{recipientLabel(c.openRecipients)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+
+                    {/* click rate */}
+                    <td className="px-4 py-4 text-right">
+                      {c.clickRate > 0 ? (
+                        <div>
+                          <span className="text-green-600 font-medium block">{pct(c.clickRate)}</span>
+                          <span className="text-gray-400 text-xs">{recipientLabel(c.clickRecipients)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+
+                    {/* fulfilled order / revenue */}
+                    <td className="px-4 py-4 text-right">
+                      {c.revenue > 0 ? (
+                        <div>
+                          <span className="text-blue-600 font-medium block">{euro(c.revenue)}</span>
+                          <span className="text-gray-400 text-xs">{recipientLabel(c.revenueRecipients)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-400">{euro(0)}</span>
+                      )}
+                    </td>
+
+                    {/* 3-dots */}
+                    <td className="px-2 py-4 relative">
+                      <button
+                        onClick={() => setOpenMenu(openMenu === c.id ? null : c.id)}
+                        className="p-1 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
+                      {openMenu === c.id && (
+                        <>
+                          <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />
+                          <div className="absolute right-4 top-10 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-40">
+                            <button
+                              onClick={() => setOpenMenu(null)}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => setOpenMenu(null)}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              Duplicate
+                            </button>
+                            <button
+                              onClick={() => setOpenMenu(null)}
+                              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                            >
+                              Archive
+                            </button>
+                            <button
+                              onClick={() => setOpenMenu(null)}
+                              className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
-
