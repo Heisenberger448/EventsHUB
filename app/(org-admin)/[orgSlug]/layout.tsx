@@ -8,7 +8,7 @@ import TopBar from '@/components/org-admin/TopBar'
 import OnboardingWizard from '@/components/org-admin/OnboardingWizard'
 import CreateEventModal from '@/components/org-admin/CreateEventModal'
 import { EventProvider, useEventContext } from '@/contexts/EventContext'
-import { Ticket, PenLine, X, ChevronLeft, ExternalLink, CheckCircle2, Clock, Eye, EyeOff, Loader2, Calendar, MapPin, Search } from 'lucide-react'
+import { Ticket, PenLine, X, ChevronLeft, ExternalLink, CheckCircle2, Clock, Eye, EyeOff, Loader2, Calendar, MapPin, Search, Plus, Store } from 'lucide-react'
 
 /* ── Weeztix event type ───────────────────────────────────── */
 interface WeeztixEvent {
@@ -18,6 +18,11 @@ interface WeeztixEvent {
   start: string | null
   end: string | null
   location: string | null
+}
+
+interface WeeztixShop {
+  guid: string
+  name: string
 }
 
 /* ── Ticket Provider definitions ──────────────────────────── */
@@ -59,7 +64,7 @@ const TICKET_PROVIDERS = [
 /* ── Event Choice Modal (Connect Provider vs Add Manually) ── */
 function EventChoiceModal() {
   const { showEventChoiceModal, setShowEventChoiceModal, setShowCreateModal, refreshEvents, setSelectedEvent, weeztixReturnPending, setWeeztixReturnPending } = useEventContext()
-  const [step, setStep] = useState<'choice' | 'providers' | 'weeztix' | 'weeztix-events'>('choice')
+  const [step, setStep] = useState<'choice' | 'providers' | 'weeztix' | 'weeztix-events' | 'weeztix-shops'>('choice')
 
   /* Weeztix connect form state */
   const [clientId, setClientId] = useState('')
@@ -76,6 +81,15 @@ function EventChoiceModal() {
   const [selectedWeeztixEvent, setSelectedWeeztixEvent] = useState<WeeztixEvent | null>(null)
   const [importing, setImporting] = useState(false)
 
+  /* Weeztix shops state */
+  const [weeztixShops, setWeeztixShops] = useState<WeeztixShop[]>([])
+  const [loadingShops, setLoadingShops] = useState(false)
+  const [shopsError, setShopsError] = useState('')
+  const [selectedShop, setSelectedShop] = useState<WeeztixShop | null>(null)
+  const [showNewShopInput, setShowNewShopInput] = useState(false)
+  const [newShopName, setNewShopName] = useState('')
+  const [creatingShop, setCreatingShop] = useState(false)
+
   const handleClose = () => {
     setShowEventChoiceModal(false)
     setStep('choice')
@@ -87,6 +101,11 @@ function EventChoiceModal() {
     setEventsError('')
     setEventSearch('')
     setSelectedWeeztixEvent(null)
+    setWeeztixShops([])
+    setShopsError('')
+    setSelectedShop(null)
+    setShowNewShopInput(false)
+    setNewShopName('')
   }
 
   const handleWeeztixConnect = async () => {
@@ -142,6 +161,60 @@ function EventChoiceModal() {
     fetchWeeztixEvents()
   }
 
+  /* fetch Weeztix shops */
+  const fetchWeeztixShops = async () => {
+    setLoadingShops(true)
+    setShopsError('')
+    try {
+      const res = await fetch('/api/integrations/weeztix/shops')
+      if (!res.ok) {
+        const data = await res.json()
+        setShopsError(data.error || 'Kon shops niet ophalen')
+        return
+      }
+      const data = await res.json()
+      setWeeztixShops(Array.isArray(data) ? data : [])
+    } catch {
+      setShopsError('Kon shops niet ophalen van Weeztix')
+    } finally {
+      setLoadingShops(false)
+    }
+  }
+
+  /* create a new shop in Weeztix */
+  const handleCreateShop = async () => {
+    if (!newShopName.trim()) return
+    setCreatingShop(true)
+    setShopsError('')
+    try {
+      const res = await fetch('/api/integrations/weeztix/shops/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newShopName.trim() }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setShopsError(data.error || 'Kon shop niet aanmaken')
+        return
+      }
+      const shop = await res.json()
+      setWeeztixShops(prev => [shop, ...prev])
+      setSelectedShop(shop)
+      setShowNewShopInput(false)
+      setNewShopName('')
+    } catch {
+      setShopsError('Er ging iets mis bij het aanmaken')
+    } finally {
+      setCreatingShop(false)
+    }
+  }
+
+  /* go to shops step */
+  const goToShops = () => {
+    setStep('weeztix-shops')
+    fetchWeeztixShops()
+  }
+
   /* Auto-open at events step when returning from Weeztix OAuth */
   useEffect(() => {
     if (weeztixReturnPending && showEventChoiceModal) {
@@ -153,7 +226,7 @@ function EventChoiceModal() {
 
   /* import selected event into platform */
   const handleImportEvent = async () => {
-    if (!selectedWeeztixEvent) return
+    if (!selectedWeeztixEvent || !selectedShop) return
     setImporting(true)
     try {
       const res = await fetch('/api/events', {
@@ -165,8 +238,8 @@ function EventChoiceModal() {
           startDate: selectedWeeztixEvent.start || null,
           endDate: selectedWeeztixEvent.end || null,
           ticketProvider: 'weeztix',
-          ticketShopId: selectedWeeztixEvent.guid,
-          ticketShopName: selectedWeeztixEvent.name,
+          ticketShopId: selectedShop.guid,
+          ticketShopName: selectedShop.name,
         }),
       })
       if (!res.ok) {
@@ -179,7 +252,7 @@ function EventChoiceModal() {
       setSelectedEvent(newEvent)
       handleClose()
     } catch {
-      setEventsError('Er ging iets mis bij het importeren')
+      setShopsError('Er ging iets mis bij het importeren')
     } finally {
       setImporting(false)
     }
@@ -408,7 +481,7 @@ function EventChoiceModal() {
               </button>
             </div>
           </>
-        ) : (
+        ) : step === 'weeztix-events' ? (
           <>
             {/* ── Weeztix events selection ── */}
             <div className="flex items-center gap-3 mb-4">
@@ -500,10 +573,147 @@ function EventChoiceModal() {
               )}
             </div>
 
+            {/* Next button */}
+            <button
+              onClick={goToShops}
+              disabled={!selectedWeeztixEvent}
+              className="w-full px-4 py-2.5 bg-[#0F172A] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              Volgende →
+            </button>
+          </>
+        ) : (
+          <>
+            {/* ── Weeztix shops selection ── */}
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => { setStep('weeztix-events'); setShopsError(''); setSelectedShop(null) }}
+                className="p-1 -ml-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <div className="w-9 h-9 bg-[#0F172A] rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">W</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 leading-tight">Ticket Shop</h2>
+                <p className="text-xs text-gray-500">Selecteer of maak een ticket shop aan</p>
+              </div>
+            </div>
+
+            {/* Selected event summary */}
+            {selectedWeeztixEvent && (
+              <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                <p className="text-xs text-gray-500 mb-0.5">Geselecteerd event</p>
+                <p className="text-sm font-medium text-gray-900">{selectedWeeztixEvent.name}</p>
+                {selectedWeeztixEvent.start && (
+                  <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                    <Calendar className="h-3 w-3" />
+                    {new Date(selectedWeeztixEvent.start).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Create new shop */}
+            {showNewShopInput ? (
+              <div className="mb-3 p-3 border border-blue-200 bg-blue-50/50 rounded-xl">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">Nieuwe shop naam</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={newShopName}
+                    onChange={(e) => setNewShopName(e.target.value)}
+                    placeholder="Bijv. Mijn Ticket Shop"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    autoFocus
+                  />
+                  <button
+                    onClick={handleCreateShop}
+                    disabled={creatingShop || !newShopName.trim()}
+                    className="px-3 py-2 bg-[#0F172A] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {creatingShop ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Aanmaken'}
+                  </button>
+                </div>
+                <button
+                  onClick={() => { setShowNewShopInput(false); setNewShopName('') }}
+                  className="mt-2 text-xs text-gray-500 hover:text-gray-700"
+                >
+                  Annuleren
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowNewShopInput(true)}
+                className="w-full flex items-center gap-2.5 p-3 mb-3 border border-dashed border-gray-300 rounded-xl text-left hover:border-blue-300 hover:bg-blue-50/30 transition-all text-sm text-gray-600 hover:text-gray-900"
+              >
+                <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <Plus className="h-4 w-4 text-gray-500" />
+                </div>
+                Nieuwe ticket shop aanmaken
+              </button>
+            )}
+
+            {/* Shops list */}
+            <div className="max-h-52 overflow-y-auto space-y-1.5 mb-4">
+              {loadingShops ? (
+                <div className="flex flex-col items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">Shops ophalen uit Weeztix...</p>
+                </div>
+              ) : shopsError ? (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">{shopsError}</p>
+                  <button
+                    onClick={fetchWeeztixShops}
+                    className="mt-2 text-sm text-red-700 underline font-medium"
+                  >
+                    Opnieuw proberen
+                  </button>
+                </div>
+              ) : weeztixShops.length === 0 ? (
+                <div className="text-center py-6">
+                  <Store className="mx-auto h-8 w-8 text-gray-300 mb-2" />
+                  <p className="text-sm text-gray-500">
+                    Geen bestaande shops gevonden. Maak een nieuwe aan.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Bestaande shops</p>
+                  {weeztixShops.map((shop) => {
+                    const isSelected = selectedShop?.guid === shop.guid
+                    return (
+                      <button
+                        key={shop.guid}
+                        onClick={() => setSelectedShop(isSelected ? null : shop)}
+                        className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                          isSelected
+                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-200'
+                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                          isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
+                        }`}>
+                          {isSelected && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                          )}
+                        </div>
+                        <Store className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <span className="font-medium text-gray-900 text-sm truncate">{shop.name}</span>
+                      </button>
+                    )
+                  })}
+                </>
+              )}
+            </div>
+
             {/* Import button */}
             <button
               onClick={handleImportEvent}
-              disabled={!selectedWeeztixEvent || importing}
+              disabled={!selectedShop || importing}
               className="w-full px-4 py-2.5 bg-[#0F172A] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {importing ? (
