@@ -207,11 +207,8 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
         </div>
       </nav>
 
-      {/* Grow section */}
-      <div className="px-4 py-6 border-t border-gray-200">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
-          Grow with SharedCrowd
-        </p>
+      {/* Bottom links */}
+      <div className="px-2 pb-2 border-t border-gray-200 pt-4 space-y-1">
         <Link
           href={`/${orgSlug}/boost`}
           className={`
@@ -225,10 +222,6 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
           <TrendingUp className="h-5 w-5" />
           <span>Boost your event</span>
         </Link>
-      </div>
-
-      {/* Integrations - above user section */}
-      <div className="px-2 pb-2">
         <Link
           href={`/${orgSlug}/integrations`}
           className={`
