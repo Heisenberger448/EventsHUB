@@ -9,11 +9,15 @@ import {
   Calendar,
   Link as LinkIcon,
   ChevronDown,
+  ChevronUp,
   LogOut,
   FileText,
   BarChart3,
   Gift,
-  TrendingUp
+  TrendingUp,
+  Sparkles,
+  CreditCard,
+  Settings
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -250,7 +254,11 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
             <div className="flex-1 text-left min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">{organizationName}</p>
             </div>
-            <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            {showDropdown ? (
+              <ChevronUp className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-gray-500 flex-shrink-0" />
+            )}
           </button>
 
           {showDropdown && (
@@ -259,18 +267,56 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
                 className="fixed inset-0 z-10" 
                 onClick={() => setShowDropdown(false)}
               />
-              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
-                <div className="px-4 py-2 border-b border-gray-100">
-                  <p className="text-sm font-medium text-gray-900">{userDisplayName}</p>
-                  <p className="text-xs text-gray-500">{session?.user?.email}</p>
+              <div className="absolute bottom-full left-0 right-0 mb-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                {/* User info */}
+                <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                  <div className="w-9 h-9 bg-gray-900 rounded-full flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                    {userInitials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{organizationName}</p>
+                    <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
+                  </div>
                 </div>
-                <button
-                  onClick={() => signOut({ callbackUrl: '/login' })}
-                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Uitloggen
-                </button>
+
+                {/* Menu items */}
+                <div className="py-1">
+                  <Link
+                    href={`/${orgSlug}/whats-new`}
+                    onClick={() => setShowDropdown(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Sparkles className="h-4 w-4 text-gray-400" />
+                    What&apos;s new?
+                  </Link>
+                  <Link
+                    href={`/${orgSlug}/billing`}
+                    onClick={() => setShowDropdown(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <CreditCard className="h-4 w-4 text-gray-400" />
+                    Billing
+                  </Link>
+                  <Link
+                    href={`/${orgSlug}/settings`}
+                    onClick={() => setShowDropdown(false)}
+                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <Settings className="h-4 w-4 text-gray-400" />
+                    Settings
+                  </Link>
+                </div>
+
+                {/* Logout */}
+                <div className="border-t border-gray-100 py-1">
+                  <button
+                    onClick={() => signOut({ callbackUrl: '/login' })}
+                    className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <LogOut className="h-4 w-4 text-gray-400" />
+                    Log out
+                  </button>
+                </div>
               </div>
             </>
           )}
