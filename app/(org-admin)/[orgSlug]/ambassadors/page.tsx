@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, Filter, Download, CheckCircle, XCircle, Clock, RefreshCw, Ticket } from 'lucide-react'
+import { Search, Filter, Download, CheckCircle, XCircle, Clock, RefreshCw, Ticket, Euro } from 'lucide-react'
 
 interface Ambassador {
   id: string
@@ -11,6 +11,7 @@ interface Ambassador {
   instagram: string | null
   tiktok: string | null
   ticketsSold: number
+  ticketRevenue: number
   trackerCode: string | null
   trackerUrl: string | null
   lastSyncedAt: string | null
@@ -147,6 +148,7 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
     accepted: ambassadors.filter(a => a.status === 'ACCEPTED').length,
     rejected: ambassadors.filter(a => a.status === 'REJECTED').length,
     totalTickets: ambassadors.reduce((sum, a) => sum + (a.ticketsSold || 0), 0),
+    totalRevenue: ambassadors.reduce((sum, a) => sum + (a.ticketRevenue || 0), 0),
   }
 
   return (
@@ -165,7 +167,7 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white p-4 rounded-lg border border-gray-200">
             <p className="text-sm text-gray-600">Total Ambassadors</p>
             <p className="text-2xl font-bold text-gray-900">{stats.accepted}</p>
@@ -180,6 +182,15 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
               <p className="text-sm text-gray-600">Tickets Sold</p>
             </div>
             <p className="text-2xl font-bold text-blue-600">{stats.totalTickets}</p>
+          </div>
+          <div className="bg-white p-4 rounded-lg border border-gray-200">
+            <div className="flex items-center gap-2">
+              <Euro className="h-4 w-4 text-green-500" />
+              <p className="text-sm text-gray-600">Revenue</p>
+            </div>
+            <p className="text-2xl font-bold text-green-600">
+              {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format(stats.totalRevenue / 100)}
+            </p>
           </div>
         </div>
 
@@ -240,6 +251,9 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
                     Tickets Sold
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Revenue
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Status
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -253,13 +267,13 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
               <tbody className="bg-white divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                       Loading...
                     </td>
                   </tr>
                 ) : filteredAmbassadors.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                       No ambassadors found
                     </td>
                   </tr>
@@ -318,6 +332,15 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
                               {ambassador.ticketsSold}
                             </span>
                           </div>
+                        ) : (
+                          <span className="text-xs text-gray-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {ambassador.trackerCode ? (
+                          <span className="text-sm font-semibold text-green-700">
+                            {new Intl.NumberFormat('nl-NL', { style: 'currency', currency: 'EUR' }).format((ambassador.ticketRevenue || 0) / 100)}
+                          </span>
                         ) : (
                           <span className="text-xs text-gray-400">—</span>
                         )}

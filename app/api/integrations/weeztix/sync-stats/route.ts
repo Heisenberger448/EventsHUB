@@ -86,8 +86,9 @@ export async function POST(request: NextRequest) {
     let synced = 0
     const debugInfo: any[] = []
 
-    // Map of trackerCode -> ticketsSold
+    // Map of trackerCode -> ticketsSold / revenue
     const codeToTickets = new Map<string, number>()
+    const codeToRevenue = new Map<string, number>()
 
     // --- Fetch GET /statistics/trackers (Elasticsearch aggregation) ---
     try {
@@ -132,15 +133,26 @@ export async function POST(request: NextRequest) {
               trackerData?.statistics?.doc_count ??
               docCount
 
+            // Sum revenue from all daily buckets (values are in cents)
+            let revenueCents = 0
+            const revenueBuckets = trackerData?.statistics?.revenue?.statistics?.buckets
+            if (Array.isArray(revenueBuckets)) {
+              for (const bucket of revenueBuckets) {
+                revenueCents += bucket?.statistics?.value ?? bucket?.value ?? 0
+              }
+            }
+
             if (typeof docCount === 'number') {
               codeToTickets.set(key, typeof ticketCount === 'number' ? ticketCount : docCount)
+              codeToRevenue.set(key, revenueCents)
               debugInfo.push({
                 trackerCode: key,
                 orders: docCount,
                 tickets: ticketCount,
+                revenueCents,
                 isOurs: ourCodes.has(key),
               })
-              console.log(`[sync-stats] Tracker "${key}": orders=${docCount}, tickets=${ticketCount}, isOurs=${ourCodes.has(key)}`)
+              console.log(`[sync-stats] Tracker "${key}": orders=${docCount}, tickets=${ticketCount}, revenue=${revenueCents}, isOurs=${ourCodes.has(key)}`)
             }
           }
         } else {
@@ -159,16 +171,18 @@ export async function POST(request: NextRequest) {
       if (!ae.trackerCode) continue
 
       const tickets = codeToTickets.get(ae.trackerCode) ?? 0
+      const revenue = codeToRevenue.get(ae.trackerCode) ?? 0
 
       await prisma.ambassadorEvent.update({
         where: { id: ae.id },
         data: {
           ticketsSold: tickets,
+          ticketRevenue: revenue,
           lastSyncedAt: now,
         },
       })
       synced++
-      console.log(`[sync-stats] Updated ${ae.trackerCode}: ticketsSold=${tickets}`)
+      console.log(`[sync-stats] Updated ${ae.trackerCode}: ticketsSold=${tickets}, revenue=${revenue}`)
     }
 
     return NextResponse.json({

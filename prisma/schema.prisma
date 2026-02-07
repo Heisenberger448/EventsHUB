@@ -135,6 +135,7 @@ model AmbassadorEvent {
   trackerCode  String?
   trackerUrl   String?
   ticketsSold  Int              @default(0)
+  ticketRevenue Int             @default(0)
   lastSyncedAt DateTime?
   createdAt    DateTime          @default(now())
   

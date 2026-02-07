@@ -87,6 +87,7 @@ export async function GET(request: NextRequest) {
         gender: true,
         address: true,
         ticketsSold: true,
+        ticketRevenue: true,
         trackerCode: true,
         trackerUrl: true,
         lastSyncedAt: true,
