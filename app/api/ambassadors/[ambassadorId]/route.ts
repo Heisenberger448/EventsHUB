@@ -233,3 +233,47 @@ export async function PATCH(
     )
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { ambassadorId: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user || !['ORG_ADMIN', 'ORG_USER'].includes(session.user.role)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    if (!session.user.organizationId) {
+      return NextResponse.json({ error: 'No organization' }, { status: 400 })
+    }
+
+    // Verify the ambassador event belongs to the user's organization
+    const ambassadorEvent = await prisma.ambassadorEvent.findUnique({
+      where: { id: params.ambassadorId },
+      include: { event: true },
+    })
+
+    if (!ambassadorEvent) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
+    if (ambassadorEvent.event.organizationId !== session.user.organizationId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+    }
+
+    // Only delete the AmbassadorEvent record (not the user)
+    await prisma.ambassadorEvent.delete({
+      where: { id: params.ambassadorId },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Error deleting ambassador event:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

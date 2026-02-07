@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { Search, Filter, Download, CheckCircle, XCircle, Clock, RefreshCw, Ticket, Euro } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Search, Filter, Download, CheckCircle, XCircle, Clock, RefreshCw, Ticket, Euro, MoreVertical, Eye, Trash2 } from 'lucide-react'
 
 interface Ambassador {
   id: string
@@ -34,6 +35,20 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
   const [statusFilter, setStatusFilter] = useState<string>('ACCEPTED')
   const [syncing, setSyncing] = useState(false)
   const [lastSynced, setLastSynced] = useState<string | null>(null)
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
+
+  // Close menu on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuId(null)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   useEffect(() => {
     fetchAmbassadors()
@@ -123,6 +138,25 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
       }
     } catch (error) {
       console.error('Failed to update ambassador:', error)
+    }
+  }
+
+  const deleteAmbassador = async (ambassadorId: string, name: string) => {
+    if (!confirm(`Weet je zeker dat je ${name} wilt verwijderen van dit event? De gebruiker wordt niet uit het systeem verwijderd.`)) {
+      return
+    }
+    try {
+      const res = await fetch(`/api/ambassadors/${ambassadorId}`, {
+        method: 'DELETE',
+      })
+      if (res.ok) {
+        setAmbassadors(ambassadors.filter(amb => amb.id !== ambassadorId))
+      } else {
+        alert('Verwijderen mislukt')
+      }
+    } catch (error) {
+      console.error('Failed to delete ambassador:', error)
+      alert('Verwijderen mislukt')
     }
   }
 
@@ -259,7 +293,7 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Registered
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -351,23 +385,64 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(ambassador.createdAt).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        {ambassador.status !== 'ACCEPTED' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="relative" ref={openMenuId === ambassador.id ? menuRef : undefined}>
                           <button
-                            onClick={() => updateStatus(ambassador.id, 'ACCEPTED')}
-                            className="text-green-600 hover:text-green-900"
+                            onClick={() => setOpenMenuId(openMenuId === ambassador.id ? null : ambassador.id)}
+                            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
                           >
-                            Accept
+                            <MoreVertical className="h-5 w-5 text-gray-400" />
                           </button>
-                        )}
-                        {ambassador.status !== 'REJECTED' && (
-                          <button
-                            onClick={() => updateStatus(ambassador.id, 'REJECTED')}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Reject
-                          </button>
-                        )}
+                          {openMenuId === ambassador.id && (
+                            <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                              <button
+                                onClick={() => {
+                                  setOpenMenuId(null)
+                                  router.push(`/${params.orgSlug}/ambassadors/${ambassador.id}`)
+                                }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                              >
+                                <Eye className="h-4 w-4" />
+                                Bekijk profiel
+                              </button>
+                              {ambassador.status !== 'ACCEPTED' && (
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null)
+                                    updateStatus(ambassador.id, 'ACCEPTED')
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-green-700 hover:bg-green-50"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                  Accept
+                                </button>
+                              )}
+                              {ambassador.status !== 'REJECTED' && (
+                                <button
+                                  onClick={() => {
+                                    setOpenMenuId(null)
+                                    updateStatus(ambassador.id, 'REJECTED')
+                                  }}
+                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-orange-700 hover:bg-orange-50"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                  Reject
+                                </button>
+                              )}
+                              <div className="border-t border-gray-100 my-1" />
+                              <button
+                                onClick={() => {
+                                  setOpenMenuId(null)
+                                  deleteAmbassador(ambassador.id, ambassador.user.name || ambassador.user.email)
+                                }}
+                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                Verwijderen van event
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
