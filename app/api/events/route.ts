@@ -23,25 +23,31 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { name, slug, description, startDate, endDate, ticketProvider } = body
+    const { name, description, startDate, endDate, ticketProvider, ticketShopId, ticketShopName } = body
 
-    if (!name || !slug) {
+    if (!name) {
       return NextResponse.json(
-        { error: 'Name and slug are required' },
+        { error: 'Name is required' },
         { status: 400 }
       )
     }
 
-    // Check if slug already exists
-    const existing = await prisma.event.findUnique({
-      where: { slug }
-    })
+    // Auto-generate slug from name
+    let baseSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '')
 
-    if (existing) {
-      return NextResponse.json(
-        { error: 'Event with this slug already exists' },
-        { status: 400 }
-      )
+    if (!baseSlug) baseSlug = 'event'
+
+    // Ensure slug is unique by appending a number if needed
+    let slug = baseSlug
+    let counter = 1
+    while (await prisma.event.findUnique({ where: { slug } })) {
+      slug = `${baseSlug}-${counter}`
+      counter++
     }
 
     const event = await prisma.event.create({
@@ -52,7 +58,9 @@ export async function POST(req: NextRequest) {
         description: description || null,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
-        ticketProvider: ticketProvider || null
+        ticketProvider: ticketProvider || null,
+        ticketShopId: ticketShopId || null,
+        ticketShopName: ticketShopName || null
       }
     })
 

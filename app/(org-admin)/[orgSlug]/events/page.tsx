@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Calendar, Users, X, Loader2, ChevronDown, Link2 } from 'lucide-react'
+import { Plus, Calendar, Users, X, Loader2, ChevronDown, Link2, Lock } from 'lucide-react'
 
 interface Event {
   id: string
@@ -11,6 +11,8 @@ interface Event {
   startDate: string | null
   endDate: string | null
   ticketProvider: string | null
+  ticketShopId: string | null
+  ticketShopName: string | null
   _count?: {
     ambassadors: number
   }
@@ -23,22 +25,30 @@ interface TicketProvider {
   companyName?: string | null
 }
 
+interface WeeztixShop {
+  guid: string
+  name: string
+}
+
 export default function EventsPage({ params }: { params: { orgSlug: string } }) {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
-    slug: '',
     description: '',
     startDate: '',
     endDate: '',
-    ticketProvider: ''
+    ticketProvider: '',
+    ticketShopId: '',
+    ticketShopName: ''
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [providers, setProviders] = useState<TicketProvider[]>([])
   const [loadingProviders, setLoadingProviders] = useState(false)
+  const [shops, setShops] = useState<WeeztixShop[]>([])
+  const [loadingShops, setLoadingShops] = useState(false)
 
   useEffect(() => {
     fetchEvents()
@@ -87,18 +97,50 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
   }
 
   const openModal = () => {
-    setFormData({ name: '', slug: '', description: '', startDate: '', endDate: '', ticketProvider: '' })
+    setFormData({ name: '', description: '', startDate: '', endDate: '', ticketProvider: '', ticketShopId: '', ticketShopName: '' })
     setError('')
+    setShops([])
     setShowModal(true)
     fetchProviders()
   }
 
+  const handleProviderChange = (providerId: string) => {
+    setFormData({ ...formData, ticketProvider: providerId, ticketShopId: '', ticketShopName: '' })
+    setShops([])
+
+    if (providerId === 'weeztix') {
+      fetchShops()
+    }
+  }
+
+  const fetchShops = async () => {
+    setLoadingShops(true)
+    try {
+      const res = await fetch('/api/integrations/weeztix/shops')
+      if (res.ok) {
+        const data = await res.json()
+        setShops(data)
+      } else {
+        console.error('Failed to fetch shops')
+      }
+    } catch {
+      console.error('Error fetching shops')
+    } finally {
+      setLoadingShops(false)
+    }
+  }
+
+  const handleShopChange = (shopGuid: string) => {
+    const shop = shops.find((s) => s.guid === shopGuid)
+    setFormData({
+      ...formData,
+      ticketShopId: shopGuid,
+      ticketShopName: shop?.name || '',
+    })
+  }
+
   const handleNameChange = (name: string) => {
-    const slug = name
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, '')
-      .replace(/\s+/g, '-')
-    setFormData({ ...formData, name, slug })
+    setFormData({ ...formData, name })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -178,30 +220,6 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
                   />
                 </div>
 
-                {/* Slug */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Slug (URL) <span className="text-red-500">*</span>
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-400 whitespace-nowrap">/e/</span>
-                    <input
-                      type="text"
-                      value={formData.slug}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
-                        })
-                      }
-                      placeholder="summer-festival-2026"
-                      className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                      pattern="[a-z0-9-]+"
-                      required
-                    />
-                  </div>
-                </div>
-
                 {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -269,9 +287,7 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
                     <div className="relative">
                       <select
                         value={formData.ticketProvider}
-                        onChange={(e) =>
-                          setFormData({ ...formData, ticketProvider: e.target.value })
-                        }
+                        onChange={(e) => handleProviderChange(e.target.value)}
                         className="w-full appearance-none px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white pr-10"
                       >
                         <option value="">Geen ticketprovider</option>
@@ -279,6 +295,46 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
                           <option key={p.id} value={p.id}>
                             {p.name}
                             {p.companyName ? ` — ${p.companyName}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Ticketshop — only unlocked when a provider is selected */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ticketshop
+                  </label>
+                  {!formData.ticketProvider ? (
+                    <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-400 cursor-not-allowed">
+                      <Lock className="h-4 w-4" />
+                      Selecteer eerst een ticketprovider
+                    </div>
+                  ) : loadingShops ? (
+                    <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-400">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Ticketshops laden...
+                    </div>
+                  ) : shops.length === 0 ? (
+                    <div className="px-3 py-2.5 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                      <p className="text-sm text-gray-500">
+                        Geen ticketshops gevonden in {formData.ticketProvider === 'weeztix' ? 'Weeztix' : formData.ticketProvider}.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                        value={formData.ticketShopId}
+                        onChange={(e) => handleShopChange(e.target.value)}
+                        className="w-full appearance-none px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white pr-10"
+                      >
+                        <option value="">Selecteer een ticketshop</option>
+                        {shops.map((shop) => (
+                          <option key={shop.guid} value={shop.guid}>
+                            {shop.name}
                           </option>
                         ))}
                       </select>
