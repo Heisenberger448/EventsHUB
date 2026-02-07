@@ -3,41 +3,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Search, Bell, HelpCircle, BookOpen, Rocket, Calendar, ChevronDown, Check, Plus } from 'lucide-react'
-
-interface Event {
-  id: string
-  name: string
-  slug: string
-  date: string
-}
+import { useEventContext } from '@/contexts/EventContext'
 
 export default function TopBar({ orgSlug, onOpenOnboarding }: { orgSlug: string; onOpenOnboarding?: () => void }) {
   const [supportOpen, setSupportOpen] = useState(false)
   const [eventOpen, setEventOpen] = useState(false)
-  const [events, setEvents] = useState<Event[]>([])
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
+  const { events, selectedEvent, setSelectedEvent } = useEventContext()
   const supportRef = useRef<HTMLDivElement>(null)
   const eventRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
-
-  // Fetch events
-  useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const res = await fetch('/api/events')
-        if (res.ok) {
-          const data = await res.json()
-          setEvents(data)
-          if (data.length > 0 && !selectedEvent) {
-            setSelectedEvent(data[0])
-          }
-        }
-      } catch (error) {
-        console.error('Failed to fetch events:', error)
-      }
-    }
-    fetchEvents()
-  }, [orgSlug])
 
   // Close dropdowns on outside click
   useEffect(() => {

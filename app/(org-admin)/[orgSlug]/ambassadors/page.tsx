@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Search, Filter, Download, CheckCircle, XCircle, Clock, RefreshCw, Ticket, Euro, MoreVertical, Eye, Trash2 } from 'lucide-react'
+import { useEventContext } from '@/contexts/EventContext'
 
 interface Ambassador {
   id: string
@@ -39,6 +40,7 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
   const [menuPosition, setMenuPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
   const menuRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+  const { selectedEvent } = useEventContext()
 
   const toggleMenu = (ambassadorId: string, e: React.MouseEvent<HTMLButtonElement>) => {
     if (openMenuId === ambassadorId) {
@@ -70,7 +72,7 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
 
   useEffect(() => {
     fetchAmbassadors()
-  }, [])
+  }, [selectedEvent])
 
   useEffect(() => {
     let filtered = ambassadors
@@ -93,7 +95,9 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
 
   const fetchAmbassadors = async () => {
     try {
-      const res = await fetch('/api/ambassadors')
+      const params = new URLSearchParams()
+      if (selectedEvent) params.set('eventId', selectedEvent.id)
+      const res = await fetch(`/api/ambassadors?${params.toString()}`)
       if (res.ok) {
         const data = await res.json()
         setAmbassadors(data)

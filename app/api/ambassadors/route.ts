@@ -63,10 +63,15 @@ export async function GET(request: NextRequest) {
 
     // Build filter
     const status = searchParams.get('status')
+    const eventId = searchParams.get('eventId')
     const where: any = {
       event: {
         organizationId: session.user.organizationId
       }
+    }
+
+    if (eventId) {
+      where.eventId = eventId
     }
 
     if (status && ['PENDING', 'ACCEPTED', 'REJECTED'].includes(status)) {
