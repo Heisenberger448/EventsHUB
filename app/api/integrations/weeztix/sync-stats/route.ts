@@ -8,6 +8,39 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 /**
+ * Extract ticket count from a Weeztix stats object.
+ * Tries many possible field names since the exact API schema is unknown.
+ */
+function findTicketCount(obj: any): number {
+  if (!obj || typeof obj !== 'object') return 0
+
+  // Direct numeric fields that might represent ticket count
+  const candidates = [
+    'tickets_count', 'ticketsCount', 'tickets',
+    'sold_count', 'soldCount', 'sold',
+    'orders_count', 'ordersCount', 'orders',
+    'count', 'total', 'quantity',
+    'total_tickets', 'totalTickets',
+    'number_of_tickets', 'numberOfTickets',
+  ]
+
+  for (const key of candidates) {
+    if (typeof obj[key] === 'number') return obj[key]
+  }
+
+  // Check nested: obj.statistics.tickets, obj.stats.count, etc.
+  for (const nested of ['statistics', 'stats', 'summary', 'totals']) {
+    if (obj[nested] && typeof obj[nested] === 'object') {
+      for (const key of candidates) {
+        if (typeof obj[nested][key] === 'number') return obj[nested][key]
+      }
+    }
+  }
+
+  return 0
+}
+
+/**
  * POST /api/integrations/weeztix/sync-stats
  * Fetches tracker statistics from Weeztix and updates ticketsSold for each ambassador.
  * 
@@ -71,49 +104,95 @@ export async function POST(request: NextRequest) {
       headers['Company'] = credentials.companyGuid
     }
 
-    // Fetch tracker statistics from Weeztix
-    // The API returns stats per tracker, we need to match them to our ambassador events
-    const statsRes = await fetch('https://api.weeztix.com/statistics/trackers', {
-      method: 'GET',
-      headers,
-    })
+    // Strategy: query stats per individual tracker to get reliable data
+    // Weeztix endpoints we try:
+    //  1. GET /statistics/trackers  (global overview)
+    //  2. GET /trackers/{guid}      (individual tracker with stats)
 
-    if (!statsRes.ok) {
-      const errText = await statsRes.text()
-      console.error('Weeztix statistics API failed:', statsRes.status, errText)
-      return NextResponse.json(
-        { error: `Weeztix API fout: ${statsRes.status}` },
-        { status: 502 }
-      )
+    const now = new Date()
+    let synced = 0
+    const debugInfo: any[] = []
+
+    // --- Approach 1: Try global statistics endpoint first ---
+    let globalStats: any = null
+    try {
+      const statsRes = await fetch('https://api.weeztix.com/statistics/trackers', {
+        method: 'GET',
+        headers,
+      })
+      console.log('[sync-stats] GET /statistics/trackers =>', statsRes.status)
+
+      if (statsRes.ok) {
+        globalStats = await statsRes.json()
+        console.log('[sync-stats] Global stats response:', JSON.stringify(globalStats).substring(0, 2000))
+      } else {
+        const errText = await statsRes.text()
+        console.log('[sync-stats] Global stats failed:', statsRes.status, errText.substring(0, 500))
+      }
+    } catch (e) {
+      console.error('[sync-stats] Global stats error:', e)
     }
 
-    const statsData = await statsRes.json()
-
-    // The response can be an array directly or wrapped in { data: [...] }
-    const trackerStats: any[] = Array.isArray(statsData)
-      ? statsData
-      : statsData.data || statsData.trackers || []
-
-    // Build a map of tracker guid -> tickets sold
+    // Try to extract stats from global response
     const statsMap = new Map<string, number>()
-    for (const stat of trackerStats) {
-      const guid = stat.guid || stat.tracker_guid || stat.id
-      // Weeztix may return tickets_count, orders_count, or sold_count
-      const tickets =
-        stat.tickets_count ??
-        stat.sold_count ??
-        stat.orders_count ??
-        stat.count ??
-        0
-      if (guid) {
-        statsMap.set(guid, tickets)
+
+    if (globalStats) {
+      // Flatten the response: could be array, { data: [] }, { trackers: [] }, or object keyed by guid
+      let items: any[] = []
+      if (Array.isArray(globalStats)) {
+        items = globalStats
+      } else if (Array.isArray(globalStats.data)) {
+        items = globalStats.data
+      } else if (Array.isArray(globalStats.trackers)) {
+        items = globalStats.trackers
+      } else if (typeof globalStats === 'object') {
+        // Could be keyed by guid: { "guid1": { tickets: 5 }, "guid2": { tickets: 3 } }
+        for (const [key, val] of Object.entries(globalStats)) {
+          if (val && typeof val === 'object') {
+            items.push({ guid: key, ...(val as any) })
+          }
+        }
+      }
+
+      for (const stat of items) {
+        // Try every possible key for the tracker identifier
+        const guid = stat.guid || stat.tracker_guid || stat.tracker_id || stat.id || stat.uuid
+        // Try every possible key for the ticket count
+        const tickets = findTicketCount(stat)
+        if (guid) {
+          statsMap.set(guid, tickets)
+          debugInfo.push({ guid, tickets, keys: Object.keys(stat) })
+        }
       }
     }
 
-    // Update each ambassador event with the ticket count
-    const now = new Date()
-    let synced = 0
+    // --- Approach 2: If global didn't give us results, fetch each tracker individually ---
+    if (statsMap.size === 0) {
+      console.log('[sync-stats] Global stats empty, fetching individual trackers...')
+      for (const ae of ambassadorEvents) {
+        if (!ae.trackerGuid) continue
+        try {
+          const trackerRes = await fetch(`https://api.weeztix.com/trackers/${ae.trackerGuid}`, {
+            method: 'GET',
+            headers,
+          })
+          if (trackerRes.ok) {
+            const trackerData = await trackerRes.json()
+            const data = trackerData.data || trackerData
+            console.log(`[sync-stats] Tracker ${ae.trackerGuid}:`, JSON.stringify(data).substring(0, 1000))
+            const tickets = findTicketCount(data)
+            statsMap.set(ae.trackerGuid, tickets)
+            debugInfo.push({ guid: ae.trackerGuid, tickets, keys: Object.keys(data) })
+          } else {
+            console.log(`[sync-stats] Tracker ${ae.trackerGuid} failed:`, trackerRes.status)
+          }
+        } catch (e) {
+          console.error(`[sync-stats] Error fetching tracker ${ae.trackerGuid}:`, e)
+        }
+      }
+    }
 
+    // --- Update ambassador events ---
     for (const ae of ambassadorEvents) {
       if (!ae.trackerGuid) continue
 
@@ -132,8 +211,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       message: `${synced} tracker(s) gesynchroniseerd.`,
       synced,
-      totalTrackers: trackerStats.length,
+      totalTrackers: statsMap.size,
       lastSyncedAt: now.toISOString(),
+      debug: debugInfo,
     })
   } catch (error) {
     console.error('Error syncing tracker stats:', error)

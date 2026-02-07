@@ -88,10 +88,15 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
       if (res.ok) {
         const data = await res.json()
         setLastSynced(data.lastSyncedAt)
+        console.log('[sync-stats] Response:', JSON.stringify(data, null, 2))
+        if (data.debug && data.debug.length > 0) {
+          console.log('[sync-stats] Debug info:', data.debug)
+        }
         // Refresh ambassador data to get updated ticketsSold
         await fetchAmbassadors()
       } else {
         const err = await res.json()
+        console.error('[sync-stats] Error:', err)
         alert(err.error || 'Synchronisatie mislukt')
       }
     } catch (error) {
