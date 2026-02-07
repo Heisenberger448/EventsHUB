@@ -96,7 +96,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
   /* ── create modal state ───────────────────────── */
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [formData, setFormData] = useState({ title: '', description: '', sendDate: '' })
+  const [formData, setFormData] = useState({ title: '', description: '', sendDate: '', rewardPoints: '' })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
@@ -140,7 +140,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           description: formData.description,
           startDate: formData.sendDate,
           endDate: formData.sendDate,
-          rewardPoints: 0,
+          rewardPoints: formData.rewardPoints ? parseInt(formData.rewardPoints) : 0,
           status: 'DRAFT',
         }),
       })
@@ -149,7 +149,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
         throw new Error(data.error || 'Aanmaken mislukt')
       }
       setShowCreateModal(false)
-      setFormData({ title: '', description: '', sendDate: '' })
+      setFormData({ title: '', description: '', sendDate: '', rewardPoints: '' })
       fetchCampaigns()
     } catch (err: any) {
       setFormError(err.message)
@@ -353,6 +353,22 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   required
                 />
+              </div>
+
+              {/* Points */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Punten
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.rewardPoints}
+                  onChange={(e) => setFormData({ ...formData, rewardPoints: e.target.value })}
+                  placeholder="Bijv. 50"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-400">Aantal punten dat een ambassadeur verdient bij voltooiing</p>
               </div>
 
               {/* Error */}
@@ -664,6 +680,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
               <th className="text-left px-4 py-3 font-medium text-gray-600">Event</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Send date</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-600">Points</th>
               <th className="text-right px-4 py-3 font-medium text-gray-600">Completions</th>
               <th className="w-10" />
             </tr>
@@ -671,14 +688,14 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={7} className="text-center py-16 text-gray-500">
+                <td colSpan={8} className="text-center py-16 text-gray-500">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400 mb-2" />
                   Loading...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-16">
+                <td colSpan={8} className="text-center py-16">
                   <Target className="mx-auto h-10 w-10 text-gray-300 mb-3" />
                   <p className="text-gray-500 text-sm">
                     {selectedEvent ? 'Geen campaigns gevonden voor dit event.' : 'Geen campaigns gevonden.'}
@@ -731,6 +748,11 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                       ) : (
                         <span className="text-gray-400">—</span>
                       )}
+                    </td>
+
+                    {/* points */}
+                    <td className="px-4 py-4 text-right text-gray-600 font-medium">
+                      {c.rewardPoints || 0}
                     </td>
 
                     {/* completions */}
