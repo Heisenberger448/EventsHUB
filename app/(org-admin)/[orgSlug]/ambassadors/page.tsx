@@ -36,8 +36,19 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
   const [syncing, setSyncing] = useState(false)
   const [lastSynced, setLastSynced] = useState<string | null>(null)
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
+  const [menuPosition, setMenuPosition] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
   const menuRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
+
+  const toggleMenu = (ambassadorId: string, e: React.MouseEvent<HTMLButtonElement>) => {
+    if (openMenuId === ambassadorId) {
+      setOpenMenuId(null)
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect()
+      setMenuPosition({ top: rect.bottom + 4, left: rect.right - 192 })
+      setOpenMenuId(ambassadorId)
+    }
+  }
 
   // Close menu on click outside
   useEffect(() => {
@@ -48,6 +59,13 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Close menu on scroll
+  useEffect(() => {
+    const handleScroll = () => setOpenMenuId(null)
+    window.addEventListener('scroll', handleScroll, true)
+    return () => window.removeEventListener('scroll', handleScroll, true)
   }, [])
 
   useEffect(() => {
@@ -386,63 +404,12 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
                         {new Date(ambassador.createdAt).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="relative" ref={openMenuId === ambassador.id ? menuRef : undefined}>
-                          <button
-                            onClick={() => setOpenMenuId(openMenuId === ambassador.id ? null : ambassador.id)}
-                            className="p-1 rounded-full hover:bg-gray-100 transition-colors"
-                          >
-                            <MoreVertical className="h-5 w-5 text-gray-400" />
-                          </button>
-                          {openMenuId === ambassador.id && (
-                            <div className="absolute right-0 mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                              <button
-                                onClick={() => {
-                                  setOpenMenuId(null)
-                                  router.push(`/${params.orgSlug}/ambassadors/${ambassador.id}`)
-                                }}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                              >
-                                <Eye className="h-4 w-4" />
-                                Bekijk profiel
-                              </button>
-                              {ambassador.status !== 'ACCEPTED' && (
-                                <button
-                                  onClick={() => {
-                                    setOpenMenuId(null)
-                                    updateStatus(ambassador.id, 'ACCEPTED')
-                                  }}
-                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-green-700 hover:bg-green-50"
-                                >
-                                  <CheckCircle className="h-4 w-4" />
-                                  Accept
-                                </button>
-                              )}
-                              {ambassador.status !== 'REJECTED' && (
-                                <button
-                                  onClick={() => {
-                                    setOpenMenuId(null)
-                                    updateStatus(ambassador.id, 'REJECTED')
-                                  }}
-                                  className="w-full flex items-center gap-2 px-4 py-2 text-sm text-orange-700 hover:bg-orange-50"
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                  Reject
-                                </button>
-                              )}
-                              <div className="border-t border-gray-100 my-1" />
-                              <button
-                                onClick={() => {
-                                  setOpenMenuId(null)
-                                  deleteAmbassador(ambassador.id, ambassador.user.name || ambassador.user.email)
-                                }}
-                                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Verwijderen van event
-                              </button>
-                            </div>
-                          )}
-                        </div>
+                        <button
+                          onClick={(e) => toggleMenu(ambassador.id, e)}
+                          className="p-1 rounded-full hover:bg-gray-100 transition-colors"
+                        >
+                          <MoreVertical className="h-5 w-5 text-gray-400" />
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -451,6 +418,66 @@ export default function AmbassadorsPage({ params }: { params: { orgSlug: string 
             </table>
           </div>
         </div>
+
+        {/* Fixed position dropdown menu */}
+        {openMenuId && (
+          <div
+            ref={menuRef}
+            className="fixed w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50"
+            style={{ top: menuPosition.top, left: menuPosition.left }}
+          >
+            <button
+              onClick={() => {
+                const id = openMenuId
+                setOpenMenuId(null)
+                router.push(`/${params.orgSlug}/ambassadors/${id}`)
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <Eye className="h-4 w-4" />
+              Bekijk profiel
+            </button>
+            {ambassadors.find(a => a.id === openMenuId)?.status !== 'ACCEPTED' && (
+              <button
+                onClick={() => {
+                  const id = openMenuId
+                  setOpenMenuId(null)
+                  updateStatus(id, 'ACCEPTED')
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-green-700 hover:bg-green-50"
+              >
+                <CheckCircle className="h-4 w-4" />
+                Accept
+              </button>
+            )}
+            {ambassadors.find(a => a.id === openMenuId)?.status !== 'REJECTED' && (
+              <button
+                onClick={() => {
+                  const id = openMenuId
+                  setOpenMenuId(null)
+                  updateStatus(id, 'REJECTED')
+                }}
+                className="w-full flex items-center gap-2 px-4 py-2 text-sm text-orange-700 hover:bg-orange-50"
+              >
+                <XCircle className="h-4 w-4" />
+                Reject
+              </button>
+            )}
+            <div className="border-t border-gray-100 my-1" />
+            <button
+              onClick={() => {
+                const amb = ambassadors.find(a => a.id === openMenuId)
+                const id = openMenuId
+                setOpenMenuId(null)
+                if (amb) deleteAmbassador(id, amb.user.name || amb.user.email)
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              Verwijderen van event
+            </button>
+          </div>
+        )}
     </div>
   )
 }
