@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getWeeztixToken } from '@/lib/weeztix'
 
 export async function GET(
   req: NextRequest,
@@ -44,7 +45,7 @@ export async function GET(
         event: { organizationId: session.user.organizationId }
       },
       include: {
-        event: { select: { id: true, name: true, slug: true, startDate: true, endDate: true } }
+        event: { select: { id: true, name: true, slug: true, startDate: true, endDate: true, ticketProvider: true, ticketShopId: true, ticketShopName: true } }
       },
       orderBy: { createdAt: 'desc' }
     })
@@ -82,6 +83,9 @@ export async function GET(
       gender: ambassadorEvent.gender,
       address: ambassadorEvent.address,
       status: ambassadorEvent.status,
+      trackerGuid: ambassadorEvent.trackerGuid,
+      trackerCode: ambassadorEvent.trackerCode,
+      trackerUrl: ambassadorEvent.trackerUrl,
       createdAt: ambassadorEvent.createdAt,
       events: allEvents,
       campaignCompletions,
@@ -152,8 +156,73 @@ export async function PATCH(
 
     const updatedAmbassadorEvent = await prisma.ambassadorEvent.update({
       where: { id: params.ambassadorId },
-      data: { status }
+      data: { status },
+      include: { user: true }
     })
+
+    // When accepting an ambassador, create a Weeztix tracker if the event has a ticketShopId
+    if (status === 'ACCEPTED' && !updatedAmbassadorEvent.trackerGuid) {
+      try {
+        // Load the event to check for ticketShopId
+        const event = await prisma.event.findUnique({
+          where: { id: ambassadorEvent.eventId },
+        })
+
+        if (event?.ticketProvider === 'weeztix' && event.ticketShopId) {
+          const credentials = await getWeeztixToken(ambassadorEvent.event.organizationId)
+
+          if (credentials) {
+            const ambassadorName =
+              [updatedAmbassadorEvent.user.firstName, updatedAmbassadorEvent.user.lastName]
+                .filter(Boolean)
+                .join(' ') ||
+              updatedAmbassadorEvent.user.name ||
+              updatedAmbassadorEvent.user.email.split('@')[0]
+
+            const headers: Record<string, string> = {
+              Authorization: `Bearer ${credentials.token}`,
+              'Content-Type': 'application/json',
+            }
+            if (credentials.companyGuid) {
+              headers['Company'] = credentials.companyGuid
+            }
+
+            const trackerRes = await fetch('https://api.weeztix.com/trackers', {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                shop_id: event.ticketShopId,
+                name: `Ambassador - ${ambassadorName}`,
+                type: 'other',
+              }),
+            })
+
+            if (trackerRes.ok) {
+              const trackerData = await trackerRes.json()
+              const trackerGuid = trackerData.guid || trackerData.data?.guid
+              const trackerCode = trackerData.code || trackerData.data?.code
+              const trackerUrl = trackerCode
+                ? `https://shop.weeztix.com/${trackerCode}`
+                : null
+
+              await prisma.ambassadorEvent.update({
+                where: { id: params.ambassadorId },
+                data: { trackerGuid, trackerCode, trackerUrl },
+              })
+            } else {
+              console.error(
+                'Failed to create Weeztix tracker:',
+                trackerRes.status,
+                await trackerRes.text()
+              )
+            }
+          }
+        }
+      } catch (trackerErr) {
+        // Don't fail the accept if tracker creation fails
+        console.error('Error creating tracker:', trackerErr)
+      }
+    }
 
     return NextResponse.json(updatedAmbassadorEvent)
   } catch (error) {

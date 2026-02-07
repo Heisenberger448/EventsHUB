@@ -11,6 +11,9 @@ import {
   Calendar,
   Star,
   MoreHorizontal,
+  Link2,
+  ExternalLink,
+  Copy,
 } from 'lucide-react'
 
 interface AmbassadorProfile {
@@ -24,6 +27,9 @@ interface AmbassadorProfile {
   gender: string | null
   address: string | null
   totalPoints: number
+  trackerGuid: string | null
+  trackerCode: string | null
+  trackerUrl: string | null
   user: {
     id: string
     firstName: string | null
@@ -37,12 +43,18 @@ interface AmbassadorProfile {
     id: string
     status: string
     createdAt: string
+    trackerGuid: string | null
+    trackerCode: string | null
+    trackerUrl: string | null
     event: {
       id: string
       name: string
       slug: string
       startDate: string | null
       endDate: string | null
+      ticketProvider: string | null
+      ticketShopId: string | null
+      ticketShopName: string | null
     }
   }[]
   campaignCompletions: {
@@ -288,6 +300,46 @@ export default function AmbassadorProfilePage({
           </dl>
         </div>
 
+        {/* Tracking info */}
+        {profile.trackerUrl && (
+          <div className="px-6 py-4 border-t border-gray-100">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+              Tracking
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <dt className="text-xs text-gray-500">Tracking code</dt>
+                <dd className="text-sm font-mono font-medium text-gray-900 flex items-center gap-2 mt-0.5">
+                  {profile.trackerCode}
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(profile.trackerCode || '')
+                    }}
+                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    title="Kopieer code"
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </button>
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-gray-500">Tracking URL</dt>
+                <dd className="mt-0.5">
+                  <a
+                    href={profile.trackerUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1 break-all"
+                  >
+                    {profile.trackerUrl}
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                  </a>
+                </dd>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Events tags */}
         {profile.events.length > 0 && (
           <div className="px-6 py-4 border-t border-gray-100">
@@ -378,6 +430,26 @@ export default function AmbassadorProfilePage({
                           Aangemeld op{' '}
                           {new Date(ev.createdAt).toLocaleDateString('nl-NL')}
                         </p>
+                        {ev.trackerUrl && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Link2 className="h-3 w-3 text-gray-400" />
+                            <a
+                              href={ev.trackerUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-600 hover:text-blue-700 font-mono"
+                            >
+                              {ev.trackerCode}
+                            </a>
+                            <button
+                              onClick={() => navigator.clipboard.writeText(ev.trackerUrl || '')}
+                              className="text-gray-400 hover:text-gray-600"
+                              title="Kopieer URL"
+                            >
+                              <Copy className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
                       </div>
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
