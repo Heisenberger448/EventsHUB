@@ -158,6 +158,23 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
     }
   }
 
+  /* ── delete campaign ──────────────────────────── */
+  const handleDelete = async (id: string) => {
+    if (!confirm('Weet je zeker dat je deze campaign wilt verwijderen?')) return
+    try {
+      const res = await fetch(`/api/campaigns/${id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json()
+        alert(data.error || 'Verwijderen mislukt')
+        return
+      }
+      fetchCampaigns()
+    } catch (err) {
+      console.error('Failed to delete campaign', err)
+      alert('Er ging iets mis bij het verwijderen.')
+    }
+  }
+
   /* filter */
   const filtered = campaigns.filter(
     (c) =>
@@ -785,7 +802,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                               Duplicate
                             </button>
                             <button
-                              onClick={() => setOpenMenu(null)}
+                              onClick={() => { setOpenMenu(null); handleDelete(c.id) }}
                               className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                             >
                               Delete
