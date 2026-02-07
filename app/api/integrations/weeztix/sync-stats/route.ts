@@ -122,16 +122,25 @@ export async function POST(request: NextRequest) {
             if (!value || typeof value !== 'object') continue
 
             const trackerData = value as any
-            const docCount = trackerData.doc_count
+            const docCount = trackerData.doc_count // number of orders
+
+            // The actual ticket count is in statistics.revenue.doc_count
+            // (multiple tickets per order are counted separately there)
+            // Weeztix structure: { doc_count: 1, statistics: { doc_count: X, revenue: { doc_count: 2, ... } } }
+            const ticketCount =
+              trackerData?.statistics?.revenue?.doc_count ??
+              trackerData?.statistics?.doc_count ??
+              docCount
 
             if (typeof docCount === 'number') {
-              codeToTickets.set(key, docCount)
+              codeToTickets.set(key, typeof ticketCount === 'number' ? ticketCount : docCount)
               debugInfo.push({
                 trackerCode: key,
-                docCount,
+                orders: docCount,
+                tickets: ticketCount,
                 isOurs: ourCodes.has(key),
               })
-              console.log(`[sync-stats] Tracker "${key}": doc_count=${docCount}, isOurs=${ourCodes.has(key)}`)
+              console.log(`[sync-stats] Tracker "${key}": orders=${docCount}, tickets=${ticketCount}, isOurs=${ourCodes.has(key)}`)
             }
           }
         } else {
