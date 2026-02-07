@@ -1,17 +1,52 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { Search, Bell, HelpCircle, BookOpen, Rocket } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Search, Bell, HelpCircle, BookOpen, Rocket, Calendar, ChevronDown, Check, Plus } from 'lucide-react'
 
-export default function TopBar({ onOpenOnboarding }: { onOpenOnboarding?: () => void }) {
+interface Event {
+  id: string
+  name: string
+  slug: string
+  date: string
+}
+
+export default function TopBar({ orgSlug, onOpenOnboarding }: { orgSlug: string; onOpenOnboarding?: () => void }) {
   const [supportOpen, setSupportOpen] = useState(false)
+  const [eventOpen, setEventOpen] = useState(false)
+  const [events, setEvents] = useState<Event[]>([])
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null)
   const supportRef = useRef<HTMLDivElement>(null)
+  const eventRef = useRef<HTMLDivElement>(null)
+  const router = useRouter()
 
-  // Close dropdown on outside click
+  // Fetch events
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch('/api/events')
+        if (res.ok) {
+          const data = await res.json()
+          setEvents(data)
+          if (data.length > 0 && !selectedEvent) {
+            setSelectedEvent(data[0])
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch events:', error)
+      }
+    }
+    fetchEvents()
+  }, [orgSlug])
+
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (supportRef.current && !supportRef.current.contains(e.target as Node)) {
         setSupportOpen(false)
+      }
+      if (eventRef.current && !eventRef.current.contains(e.target as Node)) {
+        setEventOpen(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -38,6 +73,61 @@ export default function TopBar({ onOpenOnboarding }: { onOpenOnboarding?: () => 
 
       {/* Right side */}
       <div className="flex items-center gap-2 ml-4">
+        {/* Event selector */}
+        <div ref={eventRef} className="relative">
+          <button
+            onClick={() => setEventOpen(!eventOpen)}
+            className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
+          >
+            <Calendar className="h-4 w-4 text-gray-400" />
+            <span className="max-w-[160px] truncate">
+              {selectedEvent?.name || 'Select event'}
+            </span>
+            <ChevronDown className="h-4 w-4 text-gray-400" />
+          </button>
+
+          {eventOpen && (
+            <div className="absolute right-0 top-full mt-1 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-30">
+              <div className="py-1 max-h-64 overflow-y-auto">
+                {events.length === 0 ? (
+                  <p className="px-4 py-3 text-sm text-gray-500">No events yet</p>
+                ) : (
+                  events.map((event) => (
+                    <button
+                      key={event.id}
+                      onClick={() => {
+                        setSelectedEvent(event)
+                        setEventOpen(false)
+                      }}
+                      className="w-full flex items-center justify-between px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Calendar className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                        <span className="truncate">{event.name}</span>
+                      </div>
+                      {selectedEvent?.id === event.id && (
+                        <Check className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+              <div className="border-t border-gray-100 py-1">
+                <button
+                  onClick={() => {
+                    setEventOpen(false)
+                    router.push(`/${orgSlug}/events`)
+                  }}
+                  className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-blue-600 hover:bg-blue-50 transition-colors font-medium"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Event
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Notifications */}
         <button className="relative p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
           <Bell className="h-5 w-5" />

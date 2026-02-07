@@ -59,7 +59,7 @@ export default function OrgSlugLayout({ children }: { children: ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-white">
       <Sidebar orgSlug={orgSlug} organizationName={organizationName || 'Loading...'} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <TopBar onOpenOnboarding={() => setShowOnboarding(true)} />
+        <TopBar orgSlug={orgSlug} onOpenOnboarding={() => setShowOnboarding(true)} />
         <main className="flex-1 overflow-y-auto bg-gray-50">
           {children}
         </main>
