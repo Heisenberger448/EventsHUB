@@ -54,7 +54,7 @@ export default function TopBar({ orgSlug, onOpenOnboarding }: { orgSlug: string;
             className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors border border-gray-200"
           >
             <Calendar className="h-4 w-4 text-gray-400" />
-            <span className="max-w-[160px] truncate">
+            <span className="max-w-[240px] truncate">
               {selectedEvent?.name || 'Select event'}
             </span>
             <ChevronDown className="h-4 w-4 text-gray-400" />
