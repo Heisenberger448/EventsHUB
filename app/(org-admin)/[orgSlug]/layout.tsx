@@ -33,7 +33,7 @@ export default function OrgSlugLayout({ children }: { children: ReactNode }) {
 
   const fetchOrgName = async () => {
     try {
-      const res = await fetch(`/api/organizations/id/${orgSlug}`)
+      const res = await fetch(`/api/organizations/by-slug/${orgSlug}`)
       if (res.ok) {
         const data = await res.json()
         setOrganizationName(data.name)
