@@ -274,7 +274,7 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
                     {userInitials}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{organizationName}</p>
+                    <p className="text-sm font-semibold text-gray-900 truncate">{userDisplayName}</p>
                     <p className="text-xs text-gray-500 truncate">{session?.user?.email}</p>
                   </div>
                 </div>
