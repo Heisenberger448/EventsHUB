@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Plus, Calendar, Users } from 'lucide-react'
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Calendar, Users, X, Loader2, ChevronDown, Link2 } from 'lucide-react'
 
 interface Event {
   id: string
@@ -10,27 +10,66 @@ interface Event {
   description: string | null
   startDate: string | null
   endDate: string | null
+  ticketProvider: string | null
   _count?: {
     ambassadors: number
   }
 }
 
+interface TicketProvider {
+  id: string
+  name: string
+  connected: boolean
+  companyName?: string | null
+}
+
 export default function EventsPage({ params }: { params: { orgSlug: string } }) {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     slug: '',
     description: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    ticketProvider: ''
   })
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [providers, setProviders] = useState<TicketProvider[]>([])
+  const [loadingProviders, setLoadingProviders] = useState(false)
 
   useEffect(() => {
     fetchEvents()
+  }, [])
+
+  const fetchProviders = useCallback(async () => {
+    setLoadingProviders(true)
+    try {
+      // Check Weeztix status
+      const weeztixRes = await fetch('/api/integrations/weeztix')
+      const weeztixData = await weeztixRes.json()
+
+      const available: TicketProvider[] = []
+
+      if (weeztixData.connected) {
+        available.push({
+          id: 'weeztix',
+          name: 'Weeztix',
+          connected: true,
+          companyName: weeztixData.companyName,
+        })
+      }
+
+      // Future providers can be added here in the same pattern
+
+      setProviders(available)
+    } catch {
+      console.error('Failed to fetch providers')
+    } finally {
+      setLoadingProviders(false)
+    }
   }, [])
 
   const fetchEvents = async () => {
@@ -45,6 +84,21 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
     } finally {
       setLoading(false)
     }
+  }
+
+  const openModal = () => {
+    setFormData({ name: '', slug: '', description: '', startDate: '', endDate: '', ticketProvider: '' })
+    setError('')
+    setShowModal(true)
+    fetchProviders()
+  }
+
+  const handleNameChange = (name: string) => {
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+    setFormData({ ...formData, name, slug })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,8 +120,7 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
 
       const newEvent = await res.json()
       setEvents([newEvent, ...events])
-      setFormData({ name: '', slug: '', description: '', startDate: '', endDate: '' })
-      setShowCreateForm(false)
+      setShowModal(false)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -81,104 +134,192 @@ export default function EventsPage({ params }: { params: { orgSlug: string } }) 
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Events</h2>
-            <p className="text-gray-600 mt-1">Create and manage your events</p>
+            <p className="text-gray-600 mt-1">Maak en beheer je events</p>
           </div>
           <button
-            onClick={() => setShowCreateForm(!showCreateForm)}
+            onClick={openModal}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
           >
             <Plus className="h-5 w-5" />
-            Create Event
+            Event aanmaken
           </button>
         </div>
 
-        {/* Create Form */}
-        {showCreateForm && (
-          <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-            <h3 className="text-lg font-semibold mb-4">Create New Event</h3>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* ───────── Create Event Modal ───────── */}
+        {showModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+              {/* Modal header */}
+              <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
+                <h2 className="text-xl font-semibold text-gray-900">Nieuw event aanmaken</h2>
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal body */}
+              <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                {/* Event Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Event Name
+                    Eventnaam <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    placeholder="Bijv. Summer Festival 2026"
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                     required
+                    autoFocus
                   />
                 </div>
+
+                {/* Slug */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Slug (URL)
+                    Slug (URL) <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value.toLowerCase().replace(/\s+/g, '-') })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    pattern="[a-z0-9-]+"
-                    required
-                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-gray-400 whitespace-nowrap">/e/</span>
+                    <input
+                      type="text"
+                      value={formData.slug}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''),
+                        })
+                      }
+                      placeholder="summer-festival-2026"
+                      className="flex-1 px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      pattern="[a-z0-9-]+"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                {/* Description */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date
+                    Beschrijving
                   </label>
-                  <input
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Korte beschrijving van het event..."
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    rows={3}
                   />
                 </div>
+
+                {/* Dates */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Startdatum
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Einddatum
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                      className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                </div>
+
+                {/* Ticket Provider */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    End Date
+                    Ticketprovider
                   </label>
-                  <input
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  />
+                  {loadingProviders ? (
+                    <div className="flex items-center gap-2 px-3 py-2.5 border border-gray-200 rounded-lg bg-gray-50 text-sm text-gray-400">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Providers laden...
+                    </div>
+                  ) : providers.length === 0 ? (
+                    <div className="px-3 py-2.5 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+                      <p className="text-sm text-gray-500">
+                        Geen ticketproviders gekoppeld.
+                      </p>
+                      <a
+                        href={`/${params.orgSlug}/integrations`}
+                        className="inline-flex items-center gap-1 text-sm text-blue-600 hover:text-blue-700 mt-1"
+                      >
+                        <Link2 className="h-3.5 w-3.5" />
+                        Ga naar Integraties
+                      </a>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <select
+                        value={formData.ticketProvider}
+                        onChange={(e) =>
+                          setFormData({ ...formData, ticketProvider: e.target.value })
+                        }
+                        className="w-full appearance-none px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white pr-10"
+                      >
+                        <option value="">Geen ticketprovider</option>
+                        {providers.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                            {p.companyName ? ` — ${p.companyName}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  )}
                 </div>
-              </div>
-              {error && (
-                <div className="text-red-600 text-sm">{error}</div>
-              )}
-              <div className="flex gap-2">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-                >
-                  {submitting ? 'Creating...' : 'Create Event'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowCreateForm(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
+
+                {/* Error */}
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Annuleren
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Aanmaken...
+                      </>
+                    ) : (
+                      'Event aanmaken'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

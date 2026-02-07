@@ -73,6 +73,7 @@ model Event {
   description    String?
   startDate      DateTime?
   endDate        DateTime?
+  ticketProvider String?
   createdAt      DateTime          @default(now())
   
   organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)

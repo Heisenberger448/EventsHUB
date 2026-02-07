@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json()
-    const { name, slug, description, startDate, endDate } = body
+    const { name, slug, description, startDate, endDate, ticketProvider } = body
 
     if (!name || !slug) {
       return NextResponse.json(
@@ -51,7 +51,8 @@ export async function POST(req: NextRequest) {
         slug,
         description: description || null,
         startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null
+        endDate: endDate ? new Date(endDate) : null,
+        ticketProvider: ticketProvider || null
       }
     })
 
