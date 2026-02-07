@@ -96,7 +96,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
   /* ── create modal state ───────────────────────── */
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [formData, setFormData] = useState({ title: '', description: '', sendDate: '', rewardPoints: '' })
+  const [formData, setFormData] = useState({ title: '', description: '', sendDate: '', endDate: '', rewardPoints: '' })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
@@ -139,7 +139,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           title: formData.title,
           description: formData.description,
           startDate: formData.sendDate,
-          endDate: formData.sendDate,
+          endDate: formData.endDate || formData.sendDate,
           rewardPoints: formData.rewardPoints ? parseInt(formData.rewardPoints) : 0,
           status: 'DRAFT',
         }),
@@ -149,7 +149,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
         throw new Error(data.error || 'Aanmaken mislukt')
       }
       setShowCreateModal(false)
-      setFormData({ title: '', description: '', sendDate: '', rewardPoints: '' })
+      setFormData({ title: '', description: '', sendDate: '', endDate: '', rewardPoints: '' })
       fetchCampaigns()
     } catch (err: any) {
       setFormError(err.message)
@@ -292,7 +292,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
             </button>
           </div>
           <button
-            onClick={() => { setFormData({ title: '', description: '', sendDate: '', rewardPoints: '' }); setFormError(''); setShowCreateModal(true) }}
+            onClick={() => { setFormData({ title: '', description: '', sendDate: '', endDate: '', rewardPoints: '' }); setFormError(''); setShowCreateModal(true) }}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-1.5"
           >
             <Plus className="h-4 w-4" />
@@ -370,6 +370,20 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                   required
                 />
+              </div>
+
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Einddatum
+                </label>
+                <input
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-400">Tot wanneer kunnen ambassadeurs deze campagne voltooien</p>
               </div>
 
               {/* Points */}
@@ -697,6 +711,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
               <th className="text-left px-4 py-3 font-medium text-gray-600">Event</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Send date</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600">End date</th>
               <th className="text-right px-4 py-3 font-medium text-gray-600">Points</th>
               <th className="text-right px-4 py-3 font-medium text-gray-600">Completions</th>
               <th className="w-10" />
@@ -705,14 +720,14 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           <tbody className="divide-y divide-gray-100">
             {loading ? (
               <tr>
-                <td colSpan={8} className="text-center py-16 text-gray-500">
+                <td colSpan={9} className="text-center py-16 text-gray-500">
                   <Loader2 className="mx-auto h-6 w-6 animate-spin text-gray-400 mb-2" />
                   Loading...
                 </td>
               </tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center py-16">
+                <td colSpan={9} className="text-center py-16">
                   <Target className="mx-auto h-10 w-10 text-gray-300 mb-3" />
                   <p className="text-gray-500 text-sm">
                     {selectedEvent ? 'Geen campaigns gevonden voor dit event.' : 'Geen campaigns gevonden.'}
@@ -761,6 +776,17 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                       {c.startDate ? (
                         <span className="text-gray-900 font-medium">
                           {new Date(c.startDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </td>
+
+                    {/* end date */}
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {c.endDate ? (
+                        <span className="text-gray-600">
+                          {new Date(c.endDate).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
                       ) : (
                         <span className="text-gray-400">—</span>
