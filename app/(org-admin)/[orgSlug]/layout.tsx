@@ -8,7 +8,7 @@ import TopBar from '@/components/org-admin/TopBar'
 import OnboardingWizard from '@/components/org-admin/OnboardingWizard'
 import CreateEventModal from '@/components/org-admin/CreateEventModal'
 import { EventProvider, useEventContext } from '@/contexts/EventContext'
-import { Ticket, PenLine, X, ChevronLeft, ExternalLink, CheckCircle2, Clock } from 'lucide-react'
+import { Ticket, PenLine, X, ChevronLeft, ExternalLink, CheckCircle2, Clock, Eye, EyeOff, Loader2 } from 'lucide-react'
 
 /* ── Ticket Provider definitions ──────────────────────────── */
 const TICKET_PROVIDERS = [
@@ -49,11 +49,49 @@ const TICKET_PROVIDERS = [
 /* ── Event Choice Modal (Connect Provider vs Add Manually) ── */
 function EventChoiceModal() {
   const { showEventChoiceModal, setShowEventChoiceModal, setShowCreateModal } = useEventContext()
-  const [step, setStep] = useState<'choice' | 'providers'>('choice')
+  const [step, setStep] = useState<'choice' | 'providers' | 'weeztix'>('choice')
+
+  /* Weeztix connect form state */
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [showSecret, setShowSecret] = useState(false)
+  const [connecting, setConnecting] = useState(false)
+  const [connectError, setConnectError] = useState('')
 
   const handleClose = () => {
     setShowEventChoiceModal(false)
     setStep('choice')
+    setClientId('')
+    setClientSecret('')
+    setShowSecret(false)
+    setConnectError('')
+  }
+
+  const handleWeeztixConnect = async () => {
+    if (!clientId.trim() || !clientSecret.trim()) {
+      setConnectError('Vul zowel Client ID als Client Secret in')
+      return
+    }
+    setConnecting(true)
+    setConnectError('')
+    try {
+      const res = await fetch('/api/integrations/weeztix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clientId: clientId.trim(), clientSecret: clientSecret.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setConnectError(data.error || 'Er ging iets mis')
+        return
+      }
+      // Redirect to Weeztix OAuth
+      window.location.href = data.authUrl
+    } catch {
+      setConnectError('Kan niet verbinden met de server')
+    } finally {
+      setConnecting(false)
+    }
   }
 
   if (!showEventChoiceModal) return null
@@ -108,7 +146,7 @@ function EventChoiceModal() {
               </button>
             </div>
           </>
-        ) : (
+        ) : step === 'providers' ? (
           <>
             {/* ── Providers overview ── */}
             <div className="flex items-center gap-2 mb-1">
@@ -129,10 +167,7 @@ function EventChoiceModal() {
                   disabled={provider.status === 'coming_soon'}
                   onClick={() => {
                     if (provider.id === 'weeztix') {
-                      handleClose()
-                      // Navigate to integrations page for Weeztix setup
-                      const orgSlugFromUrl = window.location.pathname.split('/')[1]
-                      window.location.href = `/${orgSlugFromUrl}/integrations`
+                      setStep('weeztix')
                     }
                   }}
                   className={`flex items-center gap-3.5 p-3.5 border rounded-xl text-left transition-all ${
@@ -171,6 +206,109 @@ function EventChoiceModal() {
                   )}
                 </button>
               ))}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* ── Weeztix connect form ── */}
+            <div className="flex items-center gap-3 mb-5">
+              <button
+                onClick={() => { setStep('providers'); setConnectError('') }}
+                className="p-1 -ml-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <div className="w-9 h-9 bg-[#0F172A] rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">W</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 leading-tight">Weeztix koppelen</h2>
+                <p className="text-xs text-gray-500">Via OAuth2 autorisatie</p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
+              <p className="text-sm text-blue-800">
+                <strong>Stap 1:</strong> Ga naar{' '}
+                <a
+                  href="https://dashboard.weeztix.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline font-medium"
+                >
+                  dashboard.weeztix.com
+                </a>{' '}
+                → Bedrijfsinstellingen → OAuth Clients en maak een nieuwe client aan.
+              </p>
+              <p className="text-sm text-blue-800 mt-2">
+                <strong>Stap 2:</strong> Kopieer de Client ID en Client Secret hieronder.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client ID
+                </label>
+                <input
+                  type="text"
+                  value={clientId}
+                  onChange={(e) => setClientId(e.target.value)}
+                  placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Client Secret
+                </label>
+                <div className="relative">
+                  <input
+                    type={showSecret ? 'text' : 'password'}
+                    value={clientSecret}
+                    onChange={(e) => setClientSecret(e.target.value)}
+                    placeholder="••••••••••••••••"
+                    className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSecret(!showSecret)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {connectError && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800">{connectError}</p>
+              </div>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => { setStep('providers'); setClientId(''); setClientSecret(''); setConnectError('') }}
+                className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={handleWeeztixConnect}
+                disabled={connecting || !clientId.trim() || !clientSecret.trim()}
+                className="flex-1 px-4 py-2.5 bg-[#0F172A] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {connecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Verbinden...
+                  </>
+                ) : (
+                  'Verbinden met Weeztix'
+                )}
+              </button>
             </div>
           </>
         )}
