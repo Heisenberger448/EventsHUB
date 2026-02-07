@@ -104,95 +104,122 @@ export async function POST(request: NextRequest) {
       headers['Company'] = credentials.companyGuid
     }
 
-    // Strategy: query stats per individual tracker to get reliable data
-    // Weeztix endpoints we try:
-    //  1. GET /statistics/trackers  (global overview)
-    //  2. GET /trackers/{guid}      (individual tracker with stats)
+    // The /statistics/trackers endpoint returns Elasticsearch aggregations
+    // (global revenue per day), NOT per-tracker ticket counts.
+    // So we fetch each tracker individually via GET /trackers/{guid}
+    // and also try GET /trackers to list all trackers with their order counts.
 
     const now = new Date()
     let synced = 0
     const debugInfo: any[] = []
+    const statsMap = new Map<string, number>()
 
-    // --- Approach 1: Try global statistics endpoint first ---
-    let globalStats: any = null
+    // --- Step 1: Try GET /trackers to list all trackers with stats ---
     try {
-      const statsRes = await fetch('https://api.weeztix.com/statistics/trackers', {
+      const listRes = await fetch('https://api.weeztix.com/trackers', {
         method: 'GET',
         headers,
       })
-      console.log('[sync-stats] GET /statistics/trackers =>', statsRes.status)
+      console.log('[sync-stats] GET /trackers =>', listRes.status)
 
-      if (statsRes.ok) {
-        globalStats = await statsRes.json()
-        console.log('[sync-stats] Global stats response:', JSON.stringify(globalStats).substring(0, 2000))
-      } else {
-        const errText = await statsRes.text()
-        console.log('[sync-stats] Global stats failed:', statsRes.status, errText.substring(0, 500))
+      if (listRes.ok) {
+        const listData = await listRes.json()
+        const trackers: any[] = Array.isArray(listData)
+          ? listData
+          : listData.data || listData.trackers || listData.results || []
+
+        console.log('[sync-stats] Trackers list: found', trackers.length, 'trackers')
+        if (trackers.length > 0) {
+          console.log('[sync-stats] Sample tracker keys:', Object.keys(trackers[0]))
+          console.log('[sync-stats] Sample tracker:', JSON.stringify(trackers[0]).substring(0, 500))
+        }
+
+        for (const tracker of trackers) {
+          const guid = tracker.guid || tracker.id || tracker.uuid
+          if (!guid) continue
+          const tickets = findTicketCount(tracker)
+          statsMap.set(guid, tickets)
+          debugInfo.push({
+            source: 'list',
+            guid,
+            tickets,
+            keys: Object.keys(tracker),
+            raw: Object.fromEntries(
+              Object.entries(tracker).filter(([_, v]) => typeof v === 'number' || typeof v === 'string')
+            ),
+          })
+        }
       }
     } catch (e) {
-      console.error('[sync-stats] Global stats error:', e)
+      console.error('[sync-stats] List trackers error:', e)
     }
 
-    // Try to extract stats from global response
-    const statsMap = new Map<string, number>()
+    // --- Step 2: For any tracker GUIDs we still don't have, fetch individually ---
+    const missingGuids = ambassadorEvents.filter(
+      ae => ae.trackerGuid && !statsMap.has(ae.trackerGuid)
+    )
 
-    if (globalStats) {
-      // Flatten the response: could be array, { data: [] }, { trackers: [] }, or object keyed by guid
-      let items: any[] = []
-      if (Array.isArray(globalStats)) {
-        items = globalStats
-      } else if (Array.isArray(globalStats.data)) {
-        items = globalStats.data
-      } else if (Array.isArray(globalStats.trackers)) {
-        items = globalStats.trackers
-      } else if (typeof globalStats === 'object') {
-        // Could be keyed by guid: { "guid1": { tickets: 5 }, "guid2": { tickets: 3 } }
-        for (const [key, val] of Object.entries(globalStats)) {
-          if (val && typeof val === 'object') {
-            items.push({ guid: key, ...(val as any) })
-          }
-        }
-      }
-
-      for (const stat of items) {
-        // Try every possible key for the tracker identifier
-        const guid = stat.guid || stat.tracker_guid || stat.tracker_id || stat.id || stat.uuid
-        // Try every possible key for the ticket count
-        const tickets = findTicketCount(stat)
-        if (guid) {
-          statsMap.set(guid, tickets)
-          debugInfo.push({ guid, tickets, keys: Object.keys(stat) })
-        }
-      }
+    if (missingGuids.length > 0) {
+      console.log(`[sync-stats] Fetching ${missingGuids.length} individual tracker(s)...`)
     }
 
-    // --- Approach 2: If global didn't give us results, fetch each tracker individually ---
-    if (statsMap.size === 0) {
-      console.log('[sync-stats] Global stats empty, fetching individual trackers...')
-      for (const ae of ambassadorEvents) {
-        if (!ae.trackerGuid) continue
-        try {
-          const trackerRes = await fetch(`https://api.weeztix.com/trackers/${ae.trackerGuid}`, {
+    for (const ae of missingGuids) {
+      if (!ae.trackerGuid) continue
+      try {
+        // Try GET /trackers/{guid}
+        const trackerRes = await fetch(`https://api.weeztix.com/trackers/${ae.trackerGuid}`, {
+          method: 'GET',
+          headers,
+        })
+        console.log(`[sync-stats] GET /trackers/${ae.trackerGuid} =>`, trackerRes.status)
+
+        if (trackerRes.ok) {
+          const trackerData = await trackerRes.json()
+          const data = trackerData.data || trackerData
+          console.log(`[sync-stats] Tracker ${ae.trackerGuid}:`, JSON.stringify(data).substring(0, 1000))
+          const tickets = findTicketCount(data)
+          statsMap.set(ae.trackerGuid, tickets)
+          debugInfo.push({
+            source: 'individual',
+            guid: ae.trackerGuid,
+            tickets,
+            keys: Object.keys(data),
+            raw: Object.fromEntries(
+              Object.entries(data).filter(([_, v]) => typeof v === 'number' || typeof v === 'string')
+            ),
+          })
+        }
+
+        // Also try GET /statistics/trackers/{guid} as alternative
+        if (!statsMap.has(ae.trackerGuid) || statsMap.get(ae.trackerGuid) === 0) {
+          const statsRes = await fetch(`https://api.weeztix.com/statistics/trackers/${ae.trackerGuid}`, {
             method: 'GET',
             headers,
           })
-          if (trackerRes.ok) {
-            const trackerData = await trackerRes.json()
-            const data = trackerData.data || trackerData
-            console.log(`[sync-stats] Tracker ${ae.trackerGuid}:`, JSON.stringify(data).substring(0, 1000))
-            const tickets = findTicketCount(data)
-            statsMap.set(ae.trackerGuid, tickets)
-            debugInfo.push({ guid: ae.trackerGuid, tickets, keys: Object.keys(data) })
-          } else {
-            console.log(`[sync-stats] Tracker ${ae.trackerGuid} failed:`, trackerRes.status)
+          console.log(`[sync-stats] GET /statistics/trackers/${ae.trackerGuid} =>`, statsRes.status)
+
+          if (statsRes.ok) {
+            const statsBody = await statsRes.json()
+            console.log(`[sync-stats] Stats for ${ae.trackerGuid}:`, JSON.stringify(statsBody).substring(0, 1000))
+            const sData = statsBody.data || statsBody
+            const tickets = findTicketCount(sData)
+            if (tickets > 0) {
+              statsMap.set(ae.trackerGuid, tickets)
+              debugInfo.push({
+                source: 'statistics-individual',
+                guid: ae.trackerGuid,
+                tickets,
+                keys: Object.keys(sData),
+              })
+            }
           }
-        } catch (e) {
-          console.error(`[sync-stats] Error fetching tracker ${ae.trackerGuid}:`, e)
         }
+      } catch (e) {
+        console.error(`[sync-stats] Error fetching tracker ${ae.trackerGuid}:`, e)
       }
     }
 
-    // --- Update ambassador events ---
+    // --- Step 3: Update ambassador events ---
     for (const ae of ambassadorEvents) {
       if (!ae.trackerGuid) continue
 
