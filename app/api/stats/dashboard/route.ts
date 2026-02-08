@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
     
@@ -15,29 +15,38 @@ export async function GET() {
     }
 
     const organizationId = session.user.organizationId
+    const eventId = req.nextUrl.searchParams.get('eventId')
 
     // Get organization
     const organization = await prisma.organization.findUnique({
       where: { id: organizationId }
     })
 
-    // Get all events for this organization
-    const events = await prisma.event.findMany({
-      where: { organizationId },
-      include: {
-        ambassadorEvents: true
-      }
+    // Get total events count for this organization
+    const totalEvents = await prisma.event.count({
+      where: { organizationId }
     })
 
-    // Calculate stats
-    const totalAmbassadors = events.reduce((sum: number, event: any) => sum + event.ambassadorEvents.length, 0)
-    const pendingAmbassadors = events.reduce((sum: number, event: any) => 
-      sum + event.ambassadorEvents.filter((a: any) => a.status === 'PENDING').length, 0
-    )
-    const acceptedAmbassadors = events.reduce((sum: number, event: any) => 
-      sum + event.ambassadorEvents.filter((a: any) => a.status === 'ACCEPTED').length, 0
-    )
-    const totalEvents = events.length
+    // Build ambassador event filter
+    const ambassadorWhere: any = {
+      event: { organizationId }
+    }
+    if (eventId) {
+      ambassadorWhere.eventId = eventId
+    }
+
+    // Count ambassadors (filtered by event if provided)
+    const totalAmbassadors = await prisma.ambassadorEvent.count({
+      where: ambassadorWhere
+    })
+
+    const pendingAmbassadors = await prisma.ambassadorEvent.count({
+      where: { ...ambassadorWhere, status: 'PENDING' }
+    })
+
+    const acceptedAmbassadors = await prisma.ambassadorEvent.count({
+      where: { ...ambassadorWhere, status: 'ACCEPTED' }
+    })
 
     return NextResponse.json({
       organizationName: organization?.name || 'Organization',

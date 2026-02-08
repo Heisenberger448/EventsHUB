@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import StatCard from '@/components/org-admin/StatCard'
+import { useEventContext } from '@/contexts/EventContext'
 
 interface DashboardStats {
   totalAmbassadors: number
@@ -16,16 +17,20 @@ export default function OrgDashboardPage({ params }: { params: { orgSlug: string
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [loading, setLoading] = useState(true)
   const { data: session } = useSession()
+  const { selectedEvent } = useEventContext()
 
   const firstName = session?.user?.firstName || session?.user?.email?.split('@')[0] || 'there'
 
   useEffect(() => {
     fetchStats()
-  }, [])
+  }, [selectedEvent?.id])
 
   const fetchStats = async () => {
     try {
-      const res = await fetch('/api/stats/dashboard')
+      const url = selectedEvent?.id
+        ? `/api/stats/dashboard?eventId=${selectedEvent.id}`
+        : '/api/stats/dashboard'
+      const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
         setStats(data)
