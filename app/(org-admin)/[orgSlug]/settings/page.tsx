@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Trash2, Loader2, MessageCircle, Phone, Plus, X, Users, Shield, ShieldCheck, Eye, EyeOff } from 'lucide-react'
+import { Calendar, Trash2, Loader2, MessageCircle, Phone, Plus, X, Users, Shield, ShieldCheck, Eye, EyeOff, CheckCircle2, ExternalLink, AlertCircle, Unplug } from 'lucide-react'
 import { useEventContext } from '@/contexts/EventContext'
 import { useSession } from 'next-auth/react'
 
@@ -28,6 +28,17 @@ interface OrgUser {
   role: 'ORG_ADMIN' | 'ORG_USER'
   createdAt: string
 }
+
+interface WhatsAppIntegration {
+  id: string
+  phoneNumberId: string
+  whatsappBusinessId: string
+  displayPhoneNumber: string | null
+  verifiedName: string | null
+  connectedAt: string
+}
+
+type WhatsAppStep = 'choice' | 'connect' | 'verifying' | 'success'
 
 type SettingsTab = 'events' | 'integrations' | 'users'
 
@@ -58,8 +69,22 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
     role: 'ORG_ADMIN' as 'ORG_ADMIN' | 'ORG_USER',
   })
 
+  /* WhatsApp state */
+  const [whatsAppStep, setWhatsAppStep] = useState<WhatsAppStep>('choice')
+  const [whatsAppData, setWhatsAppData] = useState({
+    phoneNumberId: '',
+    whatsappBusinessId: '',
+    accessToken: '',
+  })
+  const [whatsAppError, setWhatsAppError] = useState('')
+  const [whatsAppIntegration, setWhatsAppIntegration] = useState<WhatsAppIntegration | null>(null)
+  const [loadingWhatsApp, setLoadingWhatsApp] = useState(false)
+  const [disconnectingWhatsApp, setDisconnectingWhatsApp] = useState(false)
+  const [showWaToken, setShowWaToken] = useState(false)
+
   useEffect(() => {
     fetchEvents()
+    fetchWhatsAppStatus()
   }, [])
 
   useEffect(() => {
@@ -131,6 +156,71 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
     } finally {
       setDeletingUserId(null)
     }
+  }
+
+  const fetchWhatsAppStatus = async () => {
+    try {
+      const res = await fetch('/api/integrations/whatsapp')
+      if (res.ok) {
+        const data = await res.json()
+        if (data.connected) {
+          setWhatsAppIntegration(data.integration)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch WhatsApp status:', error)
+    }
+  }
+
+  const handleWhatsAppConnect = async () => {
+    if (!whatsAppData.phoneNumberId || !whatsAppData.whatsappBusinessId || !whatsAppData.accessToken) {
+      setWhatsAppError('Alle velden zijn verplicht')
+      return
+    }
+    setWhatsAppStep('verifying')
+    setWhatsAppError('')
+    try {
+      const res = await fetch('/api/integrations/whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(whatsAppData),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setWhatsAppIntegration(data.integration)
+        setWhatsAppStep('success')
+      } else {
+        setWhatsAppError(data.error || 'Kon niet verbinden')
+        setWhatsAppStep('connect')
+      }
+    } catch {
+      setWhatsAppError('Er ging iets mis bij het verbinden')
+      setWhatsAppStep('connect')
+    }
+  }
+
+  const handleWhatsAppDisconnect = async () => {
+    const confirmed = window.confirm('Weet je zeker dat je WhatsApp wilt ontkoppelen?')
+    if (!confirmed) return
+    setDisconnectingWhatsApp(true)
+    try {
+      const res = await fetch('/api/integrations/whatsapp', { method: 'DELETE' })
+      if (res.ok) {
+        setWhatsAppIntegration(null)
+      }
+    } catch {
+      alert('Er ging iets mis bij het ontkoppelen')
+    } finally {
+      setDisconnectingWhatsApp(false)
+    }
+  }
+
+  const resetWhatsAppModal = () => {
+    setShowWhatsAppModal(false)
+    setWhatsAppStep('choice')
+    setWhatsAppData({ phoneNumberId: '', whatsappBusinessId: '', accessToken: '' })
+    setWhatsAppError('')
+    setShowWaToken(false)
   }
 
   const fetchEvents = async () => {
@@ -284,20 +374,55 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
           <div className="bg-white border border-gray-200 rounded-xl p-6">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
+                <div className={`w-12 h-12 ${whatsAppIntegration ? 'bg-green-500' : 'bg-gray-400'} rounded-xl flex items-center justify-center flex-shrink-0`}>
                   <MessageCircle className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold text-gray-900">WhatsApp</h3>
-                  <p className="text-sm text-gray-500 mt-0.5">Stuur berichten naar ambassadors via WhatsApp Business API</p>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-semibold text-gray-900">WhatsApp</h3>
+                    {whatsAppIntegration && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-50 text-green-700 text-[11px] font-medium rounded-full">
+                        <CheckCircle2 className="h-3 w-3" /> Verbonden
+                      </span>
+                    )}
+                  </div>
+                  {whatsAppIntegration ? (
+                    <div className="flex items-center gap-3 mt-0.5">
+                      <span className="text-sm text-gray-500">
+                        {whatsAppIntegration.displayPhoneNumber || whatsAppIntegration.phoneNumberId}
+                      </span>
+                      {whatsAppIntegration.verifiedName && (
+                        <span className="text-xs text-gray-400">
+                          {whatsAppIntegration.verifiedName}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 mt-0.5">Stuur berichten naar ambassadors via WhatsApp Business API</p>
+                  )}
                 </div>
               </div>
-              <button
-                onClick={() => setShowWhatsAppModal(true)}
-                className="px-4 py-2 bg-[#0F172A] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] transition-colors"
-              >
-                Koppelen
-              </button>
+              {whatsAppIntegration ? (
+                <button
+                  onClick={handleWhatsAppDisconnect}
+                  disabled={disconnectingWhatsApp}
+                  className="flex items-center gap-2 px-4 py-2 border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-colors disabled:opacity-50"
+                >
+                  {disconnectingWhatsApp ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Unplug className="h-4 w-4" />
+                  )}
+                  Ontkoppelen
+                </button>
+              ) : (
+                <button
+                  onClick={() => setShowWhatsAppModal(true)}
+                  className="px-4 py-2 bg-[#0F172A] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] transition-colors"
+                >
+                  Koppelen
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -500,58 +625,200 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
       {/* WhatsApp Modal */}
       {showWhatsAppModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setShowWhatsAppModal(false)} />
+          <div className="absolute inset-0 bg-black/40" onClick={resetWhatsAppModal} />
           <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
             <button
-              onClick={() => setShowWhatsAppModal(false)}
+              onClick={resetWhatsAppModal}
               className="absolute top-4 right-4 p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
             >
               <X className="h-5 w-5" />
             </button>
 
-            <div className="flex items-center gap-3 mb-1">
-              <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
-                <MessageCircle className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">WhatsApp koppelen</h2>
-                <p className="text-xs text-gray-500">Kies hoe je WhatsApp wilt instellen</p>
-              </div>
-            </div>
+            {/* Step: Choice */}
+            {whatsAppStep === 'choice' && (
+              <>
+                <div className="flex items-center gap-3 mb-1">
+                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                    <MessageCircle className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">WhatsApp koppelen</h2>
+                    <p className="text-xs text-gray-500">Kies hoe je WhatsApp wilt instellen</p>
+                  </div>
+                </div>
 
-            <div className="grid gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowWhatsAppModal(false)
-                  // TODO: implement existing number flow
-                }}
-                className="flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-green-300 hover:bg-green-50/50 transition-all text-left group"
-              >
-                <div className="p-2.5 bg-green-100 rounded-lg text-green-600 group-hover:bg-green-200 transition-colors">
-                  <Phone className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="font-medium text-gray-900 block mb-0.5">Koppel bestaand nummer</span>
-                  <span className="text-sm text-gray-500">Verbind een bestaand WhatsApp Business nummer met SharedCrowd.</span>
-                </div>
-              </button>
+                <div className="grid gap-3 mt-6">
+                  <button
+                    onClick={() => setWhatsAppStep('connect')}
+                    className="flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-green-300 hover:bg-green-50/50 transition-all text-left group"
+                  >
+                    <div className="p-2.5 bg-green-100 rounded-lg text-green-600 group-hover:bg-green-200 transition-colors">
+                      <Phone className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-900 block mb-0.5">Koppel bestaand nummer</span>
+                      <span className="text-sm text-gray-500">Verbind een bestaand WhatsApp Business nummer met SharedCrowd.</span>
+                    </div>
+                  </button>
 
-              <button
-                onClick={() => {
-                  setShowWhatsAppModal(false)
-                  // TODO: implement new number flow
-                }}
-                className="flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-green-300 hover:bg-green-50/50 transition-all text-left group"
-              >
-                <div className="p-2.5 bg-gray-100 rounded-lg text-gray-600 group-hover:bg-gray-200 transition-colors">
-                  <Plus className="h-5 w-5" />
+                  <button
+                    onClick={() => {
+                      // TODO: implement new number flow
+                    }}
+                    className="flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-green-300 hover:bg-green-50/50 transition-all text-left group"
+                  >
+                    <div className="p-2.5 bg-gray-100 rounded-lg text-gray-600 group-hover:bg-gray-200 transition-colors">
+                      <Plus className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-900 block mb-0.5">Nieuw nummer aanmaken</span>
+                      <span className="text-sm text-gray-500">Maak een nieuw WhatsApp Business nummer aan voor je organisatie.</span>
+                    </div>
+                  </button>
                 </div>
-                <div>
-                  <span className="font-medium text-gray-900 block mb-0.5">Nieuw nummer aanmaken</span>
-                  <span className="text-sm text-gray-500">Maak een nieuw WhatsApp Business nummer aan voor je organisatie.</span>
+              </>
+            )}
+
+            {/* Step: Connect existing number */}
+            {whatsAppStep === 'connect' && (
+              <>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                    <Phone className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Nummer koppelen</h2>
+                    <p className="text-xs text-gray-500">Vul je WhatsApp Business API gegevens in</p>
+                  </div>
                 </div>
-              </button>
-            </div>
+
+                {whatsAppError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <span>{whatsAppError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone Number ID *</label>
+                    <input
+                      type="text"
+                      value={whatsAppData.phoneNumberId}
+                      onChange={(e) => setWhatsAppData(prev => ({ ...prev, phoneNumberId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="bijv. 123456789012345"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Te vinden in het Meta Developer dashboard onder je WhatsApp app</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp Business Account ID *</label>
+                    <input
+                      type="text"
+                      value={whatsAppData.whatsappBusinessId}
+                      onChange={(e) => setWhatsAppData(prev => ({ ...prev, whatsappBusinessId: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                      placeholder="bijv. 123456789012345"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Je WABA ID uit het Meta Business Suite dashboard</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Permanent Access Token *</label>
+                    <div className="relative">
+                      <input
+                        type={showWaToken ? 'text' : 'password'}
+                        value={whatsAppData.accessToken}
+                        onChange={(e) => setWhatsAppData(prev => ({ ...prev, accessToken: e.target.value }))}
+                        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none"
+                        placeholder="EAAxxxxxx..."
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowWaToken(!showWaToken)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showWaToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Genereer een permanent token via het Meta Developer dashboard</p>
+                  </div>
+
+                  <a
+                    href="https://developers.facebook.com/docs/whatsapp/cloud-api/get-started"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-green-600 hover:text-green-700 font-medium"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                    Hoe vind ik deze gegevens? — Meta documentatie
+                  </a>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => { setWhatsAppStep('choice'); setWhatsAppError('') }}
+                      className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Terug
+                    </button>
+                    <button
+                      onClick={handleWhatsAppConnect}
+                      className="flex-1 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      Verifiëren & koppelen
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Step: Verifying */}
+            {whatsAppStep === 'verifying' && (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mb-4">
+                  <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">Gegevens verifiëren...</h2>
+                <p className="text-sm text-gray-500 text-center">We controleren je WhatsApp Business API credentials bij Meta</p>
+              </div>
+            )}
+
+            {/* Step: Success */}
+            {whatsAppStep === 'success' && (
+              <div className="flex flex-col items-center justify-center py-6">
+                <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mb-4">
+                  <CheckCircle2 className="h-8 w-8 text-green-600" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">WhatsApp gekoppeld!</h2>
+                <p className="text-sm text-gray-500 text-center mb-2">Je WhatsApp Business nummer is succesvol verbonden</p>
+
+                {whatsAppIntegration && (
+                  <div className="w-full bg-green-50 border border-green-100 rounded-xl p-4 mt-2 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
+                        <Phone className="h-5 w-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {whatsAppIntegration.displayPhoneNumber || 'Nummer gekoppeld'}
+                        </p>
+                        {whatsAppIntegration.verifiedName && (
+                          <p className="text-xs text-gray-500">{whatsAppIntegration.verifiedName}</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <button
+                  onClick={resetWhatsAppModal}
+                  className="w-full py-2.5 bg-[#0F172A] text-white text-sm font-medium rounded-lg hover:bg-[#1E293B] transition-colors"
+                >
+                  Sluiten
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
