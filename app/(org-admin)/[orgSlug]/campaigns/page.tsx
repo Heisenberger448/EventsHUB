@@ -102,6 +102,8 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [statusFilter, setStatusFilter] = useState<string>('ALL')
   const [showArchived, setShowArchived] = useState(false)
   const [showStatusDropdown, setShowStatusDropdown] = useState(false)
+  const [showLibrary, setShowLibrary] = useState(false)
+  const [librarySearch, setLibrarySearch] = useState('')
 
   /* ── create modal state ───────────────────────── */
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -338,7 +340,10 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           <button className="p-2 text-gray-500 hover:text-gray-700">
             <MoreHorizontal className="h-5 w-5" />
           </button>
-          <button className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+          <button
+            onClick={() => setShowLibrary(true)}
+            className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
             View library
           </button>
           {/* List / Calendar toggle */}
@@ -653,6 +658,153 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Campaign Library Modal ─────────────────── */}
+      {showLibrary && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 max-h-[85vh] flex flex-col">
+            {/* header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200 shrink-0">
+              <h2 className="text-xl font-semibold text-gray-900">Campaign Library</h2>
+              <button onClick={() => setShowLibrary(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* filters */}
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-100 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search"
+                  value={librarySearch}
+                  onChange={(e) => setLibrarySearch(e.target.value)}
+                  className="pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm w-44 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+                Campaign goal
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+              <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
+                Channel
+                <ChevronDown className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* scrollable content */}
+            <div className="overflow-y-auto flex-1 px-6 py-6 space-y-10">
+
+              {/* ── Section: Promote a product ── */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-lg font-bold text-gray-900">Promote a product</h3>
+                  <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    View all (10)
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">Highlight new releases, features, or recommendations.</p>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { title: 'New product launch', desc: 'Introduce your latest product with an email campaign designed to capture attention and drive sales.', audience: 'Engaged 180 days (Email) (17,714)' },
+                    { title: 'Best-selling product feature', desc: 'Spotlight a best-seller with a deep dive into what makes it a hit. Showcase key features, unique benefits, and customer reviews that rave about why it\'s a favorite.', audience: 'Engaged 90 days (Email) (15,916)' },
+                    { title: 'Product comparison to competition', desc: 'Show why your products stand out against competitors with side-by-side comparisons and customer quotes.', audience: 'Engaged 180 days (Email) (17,714)' },
+                    { title: 'Reasons to buy', desc: 'Share the exclusive benefits only you can offer, like charitable donations, small business support, or extreme customization. Use customer reviews and social media content as proof.', audience: 'Engaged 60 days (Email) (12,746)' },
+                    { title: 'Curated collection', desc: 'Promote a product category or related collection to showcase new styles, colors, or the variety you offer.', audience: 'Engaged 90 days (Email) (15,916)' },
+                    { title: 'Seasonal feature', desc: 'Match your product to the season — whether it\'s Halloween, Super Bowl Sunday, back-to-school, or summer break — by showing options and uses that your customers won\'t want to miss out on.', audience: 'Engaged 60 days (Email) (12,746)' },
+                  ].map((t) => (
+                    <div key={t.title} className="border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer flex flex-col">
+                      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Target className="h-4 w-4 text-gray-400" />
+                          <span className="font-semibold text-gray-900 text-sm">{t.title}</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <p className="px-4 pb-4 text-sm text-gray-500 flex-1 leading-relaxed">{t.desc}</p>
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
+                        <span className="flex items-center gap-1.5 text-xs text-gray-500">
+                          <Target className="h-3 w-3" />
+                          {t.audience}
+                        </span>
+                        <Mail className="h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Section: Engage your subscribers ── */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-lg font-bold text-gray-900">Engage your subscribers</h3>
+                  <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    View all (8)
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">Educate your audience with helpful tips, tutorials, and insights to boost engagement.</p>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { title: 'What\'s new in your business', desc: 'Keep your audience in the loop with company updates, product improvements, and exciting news.' },
+                    { title: 'Video content feature', desc: 'Drive engagement with video content — tutorials, behind-the-scenes looks, or product showcases.' },
+                    { title: 'Curated content guide', desc: 'Share a collection of helpful resources, tips, or articles that your audience will find valuable.' },
+                  ].map((t) => (
+                    <div key={t.title} className="border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer flex flex-col">
+                      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span className="font-semibold text-gray-900 text-sm">{t.title}</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <p className="px-4 pb-4 text-sm text-gray-500 flex-1 leading-relaxed">{t.desc}</p>
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
+                        <span className="text-xs text-gray-400">Template</span>
+                        <Mail className="h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* ── Section: Win back customers ── */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <h3 className="text-lg font-bold text-gray-900">Win back customers</h3>
+                  <button className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    View all (6)
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">Re-engage inactive customers with targeted campaigns and special offers.</p>
+                <div className="grid grid-cols-3 gap-4">
+                  {[
+                    { title: 'We miss you', desc: 'Reach out to customers who haven\'t engaged recently with a personalized message and incentive to return.' },
+                    { title: 'Exclusive comeback offer', desc: 'Offer a special discount or deal exclusively for lapsed customers to encourage a return visit.' },
+                    { title: 'What you\'ve been missing', desc: 'Showcase new products, features, or content that inactive customers may have missed.' },
+                  ].map((t) => (
+                    <div key={t.title} className="border border-gray-200 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer flex flex-col">
+                      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Target className="h-4 w-4 text-gray-400" />
+                          <span className="font-semibold text-gray-900 text-sm">{t.title}</span>
+                        </div>
+                        <ChevronRight className="h-4 w-4 text-gray-400" />
+                      </div>
+                      <p className="px-4 pb-4 text-sm text-gray-500 flex-1 leading-relaxed">{t.desc}</p>
+                      <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100 bg-gray-50/50 rounded-b-xl">
+                        <span className="text-xs text-gray-400">Template</span>
+                        <Mail className="h-4 w-4 text-gray-400" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+            </div>
           </div>
         </div>
       )}
