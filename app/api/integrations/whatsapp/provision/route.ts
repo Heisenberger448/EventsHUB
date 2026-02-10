@@ -47,23 +47,25 @@ export async function POST(request: NextRequest) {
     })
 
     // Step 1: Search for available phone numbers
-    // Try mobile first (available in most countries), then local as fallback
+    // Try mobile first (available in most countries), then local, then tollFree
     let availableNumbers: any[] = []
-    const numberTypes = ['mobile', 'local', 'tollFree'] as const
+    const listOpts = { smsEnabled: true as const, limit: 1 }
+    const avail = client.availablePhoneNumbers(countryCode)
+    const searches = [
+      () => avail.mobile.list(listOpts),
+      () => avail.local.list(listOpts),
+      () => avail.tollFree.list(listOpts),
+    ]
+    const searchLabels = ['mobile', 'local', 'tollFree']
 
-    for (const numberType of numberTypes) {
+    for (let i = 0; i < searches.length; i++) {
       if (availableNumbers.length > 0) break
       try {
-        availableNumbers = await client.availablePhoneNumbers(countryCode)
-          [numberType]
-          .list({
-            smsEnabled: true,
-            limit: 1,
-          })
+        availableNumbers = await searches[i]()
       } catch (searchError: any) {
         // 404 means this number type doesn't exist for this country — try next type
         if (searchError.status === 404) {
-          console.log(`Twilio: No ${numberType} numbers available for ${countryCode}, trying next type...`)
+          console.log(`Twilio: No ${searchLabels[i]} numbers available for ${countryCode}, trying next type...`)
           continue
         }
         console.error('Twilio search error:', searchError)
