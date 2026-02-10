@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Trash2, Loader2, MessageCircle, Phone, Plus, X, Users, Shield, ShieldCheck, Eye, EyeOff, CheckCircle2, ExternalLink, AlertCircle, Unplug } from 'lucide-react'
+import { Calendar, Trash2, Loader2, MessageCircle, Phone, Plus, X, Users, Shield, ShieldCheck, Eye, EyeOff, CheckCircle2, ExternalLink, AlertCircle, Unplug, Globe } from 'lucide-react'
 import { useEventContext } from '@/contexts/EventContext'
 import { useSession } from 'next-auth/react'
 
@@ -38,7 +38,7 @@ interface WhatsAppIntegration {
   connectedAt: string
 }
 
-type WhatsAppStep = 'choice' | 'connect' | 'verifying' | 'success'
+type WhatsAppStep = 'choice' | 'connect' | 'verifying' | 'success' | 'provision-country' | 'provisioning'
 
 type SettingsTab = 'events' | 'integrations' | 'users'
 
@@ -81,6 +81,7 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
   const [loadingWhatsApp, setLoadingWhatsApp] = useState(false)
   const [disconnectingWhatsApp, setDisconnectingWhatsApp] = useState(false)
   const [showWaToken, setShowWaToken] = useState(false)
+  const [provisionCountry, setProvisionCountry] = useState('NL')
 
   useEffect(() => {
     fetchEvents()
@@ -221,6 +222,30 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
     setWhatsAppData({ phoneNumberId: '', whatsappBusinessId: '', accessToken: '' })
     setWhatsAppError('')
     setShowWaToken(false)
+    setProvisionCountry('NL')
+  }
+
+  const handleProvisionNumber = async () => {
+    setWhatsAppStep('provisioning')
+    setWhatsAppError('')
+    try {
+      const res = await fetch('/api/integrations/whatsapp/provision', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ countryCode: provisionCountry }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setWhatsAppIntegration(data.integration)
+        setWhatsAppStep('success')
+      } else {
+        setWhatsAppError(data.error || 'Kon geen nummer aanmaken')
+        setWhatsAppStep('provision-country')
+      }
+    } catch {
+      setWhatsAppError('Er ging iets mis bij het aanmaken van het nummer')
+      setWhatsAppStep('provision-country')
+    }
   }
 
   const fetchEvents = async () => {
@@ -662,9 +687,7 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
                   </button>
 
                   <button
-                    onClick={() => {
-                      // TODO: implement new number flow
-                    }}
+                    onClick={() => setWhatsAppStep('provision-country')}
                     className="flex items-start gap-4 p-4 border border-gray-200 rounded-xl hover:border-green-300 hover:bg-green-50/50 transition-all text-left group"
                   >
                     <div className="p-2.5 bg-gray-100 rounded-lg text-gray-600 group-hover:bg-gray-200 transition-colors">
@@ -672,7 +695,7 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
                     </div>
                     <div>
                       <span className="font-medium text-gray-900 block mb-0.5">Nieuw nummer aanmaken</span>
-                      <span className="text-sm text-gray-500">Maak een nieuw WhatsApp Business nummer aan voor je organisatie.</span>
+                      <span className="text-sm text-gray-500">Automatisch een nieuw nummer aanmaken via Twilio.</span>
                     </div>
                   </button>
                 </div>
@@ -771,6 +794,83 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
                   </div>
                 </div>
               </>
+            )}
+
+            {/* Step: Provision — Select Country */}
+            {whatsAppStep === 'provision-country' && (
+              <>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center">
+                    <Globe className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">Nieuw nummer aanmaken</h2>
+                    <p className="text-xs text-gray-500">Er wordt automatisch een nummer via Twilio aangemaakt</p>
+                  </div>
+                </div>
+
+                {whatsAppError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-start gap-2">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                    <span>{whatsAppError}</span>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Land</label>
+                    <select
+                      value={provisionCountry}
+                      onChange={(e) => setProvisionCountry(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none bg-white"
+                    >
+                      <option value="NL">🇳🇱 Nederland</option>
+                      <option value="BE">🇧🇪 België</option>
+                      <option value="DE">🇩🇪 Duitsland</option>
+                      <option value="GB">🇬🇧 Verenigd Koninkrijk</option>
+                      <option value="US">🇺🇸 Verenigde Staten</option>
+                      <option value="FR">🇫🇷 Frankrijk</option>
+                      <option value="ES">🇪🇸 Spanje</option>
+                    </select>
+                    <p className="text-xs text-gray-400 mt-1">Kies het land voor je nieuwe telefoonnummer</p>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
+                    <p className="font-medium text-gray-900 mb-1">Wat er gaat gebeuren:</p>
+                    <ul className="space-y-1 text-xs">
+                      <li>• Er wordt een nieuw telefoonnummer aangeschaft via Twilio</li>
+                      <li>• Het nummer wordt automatisch gekoppeld aan je organisatie</li>
+                      <li>• Je kunt het nummer direct gebruiken voor WhatsApp communicatie</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex gap-3 pt-2">
+                    <button
+                      onClick={() => { setWhatsAppStep('choice'); setWhatsAppError('') }}
+                      className="flex-1 py-2.5 border border-gray-200 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Terug
+                    </button>
+                    <button
+                      onClick={handleProvisionNumber}
+                      className="flex-1 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
+                    >
+                      Nummer aanmaken
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Step: Provisioning in progress */}
+            {whatsAppStep === 'provisioning' && (
+              <div className="flex flex-col items-center justify-center py-8">
+                <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mb-4">
+                  <Loader2 className="h-8 w-8 text-green-600 animate-spin" />
+                </div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-1">Nummer wordt aangemaakt...</h2>
+                <p className="text-sm text-gray-500 text-center">We zoeken en kopen een nummer via Twilio. Dit kan even duren.</p>
+              </div>
             )}
 
             {/* Step: Verifying */}

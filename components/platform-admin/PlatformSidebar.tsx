@@ -12,7 +12,8 @@ interface NavItem {
 const navigation: NavItem[] = [
   { name: 'Dashboard', href: '/admin', icon: '📊' },
   { name: 'Analytics', href: '/admin/analytics', icon: '📈' },
-  { name: 'Organisations', href: '/admin/organisations', icon: '🏢' }
+  { name: 'Organisations', href: '/admin/organisations', icon: '🏢' },
+  { name: 'Twilio', href: '/admin/twilio', icon: '📞' },
 ]
 
 export default function PlatformSidebar() {
