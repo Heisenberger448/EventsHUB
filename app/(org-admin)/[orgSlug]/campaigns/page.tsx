@@ -100,6 +100,13 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
+  /* ── edit modal state ─────────────────────────── */
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
+  const [editFormData, setEditFormData] = useState({ title: '', description: '', sendDate: '', endDate: '', rewardPoints: '', status: '' })
+  const [editSubmitting, setEditSubmitting] = useState(false)
+  const [editFormError, setEditFormError] = useState('')
+
   /* ── fetch campaigns ──────────────────────────── */
   const fetchCampaigns = useCallback(async () => {
     setLoading(true)
@@ -155,6 +162,55 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
       setFormError(err.message)
     } finally {
       setSubmitting(false)
+    }
+  }
+
+  /* ── open edit modal ──────────────────────────── */
+  const openEditModal = (campaign: Campaign) => {
+    setEditingCampaign(campaign)
+    setEditFormData({
+      title: campaign.title,
+      description: campaign.description,
+      sendDate: campaign.startDate ? new Date(campaign.startDate).toISOString().split('T')[0] : '',
+      endDate: campaign.endDate ? new Date(campaign.endDate).toISOString().split('T')[0] : '',
+      rewardPoints: String(campaign.rewardPoints || 0),
+      status: campaign.status,
+    })
+    setEditFormError('')
+    setShowEditModal(true)
+    setOpenMenu(null)
+  }
+
+  /* ── update campaign ──────────────────────────── */
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingCampaign) return
+    setEditSubmitting(true)
+    setEditFormError('')
+    try {
+      const res = await fetch(`/api/campaigns/${editingCampaign.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: editFormData.title,
+          description: editFormData.description,
+          startDate: editFormData.sendDate,
+          endDate: editFormData.endDate || editFormData.sendDate,
+          rewardPoints: editFormData.rewardPoints ? parseInt(editFormData.rewardPoints) : 0,
+          status: editFormData.status,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Bijwerken mislukt')
+      }
+      setShowEditModal(false)
+      setEditingCampaign(null)
+      fetchCampaigns()
+    } catch (err: any) {
+      setEditFormError(err.message)
+    } finally {
+      setEditSubmitting(false)
     }
   }
 
@@ -438,6 +494,150 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
         </div>
       )}
 
+      {/* ── Edit Campaign Modal ────────────────────── */}
+      {showEditModal && editingCampaign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+            {/* header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">Campaign bewerken</h2>
+              <button onClick={() => { setShowEditModal(false); setEditingCampaign(null) }} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* body */}
+            <form onSubmit={handleUpdate} className="p-6 space-y-5">
+              {/* Event badge (read-only) */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
+                <Calendar className="h-4 w-4" />
+                Event: <span className="font-medium">{editingCampaign.event?.name || '—'}</span>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Campaign naam <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editFormData.title}
+                  onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Beschrijving <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={editFormData.description}
+                  onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  rows={3}
+                  required
+                />
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="DRAFT">Draft</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="ARCHIVED">Archived</option>
+                </select>
+              </div>
+
+              {/* Send Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Verzenddatum <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={editFormData.sendDate}
+                  onChange={(e) => setEditFormData({ ...editFormData, sendDate: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  required
+                />
+              </div>
+
+              {/* End Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Einddatum
+                </label>
+                <input
+                  type="date"
+                  value={editFormData.endDate}
+                  onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+                <p className="mt-1 text-xs text-gray-400">Tot wanneer kunnen ambassadeurs deze campagne voltooien</p>
+              </div>
+
+              {/* Points */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Punten
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editFormData.rewardPoints}
+                  onChange={(e) => setEditFormData({ ...editFormData, rewardPoints: e.target.value })}
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                />
+              </div>
+
+              {/* Error */}
+              {editFormError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-sm text-red-800">{editFormError}</p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setShowEditModal(false); setEditingCampaign(null) }}
+                  className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200"
+                >
+                  Annuleren
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSubmitting}
+                  className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {editSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Opslaan...
+                    </>
+                  ) : (
+                    'Wijzigingen opslaan'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* ── CALENDAR VIEW ─────────────────────────── */}
       {viewMode === 'calendar' && (
         <>
@@ -545,7 +745,8 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                       {items.map((c) => (
                         <div
                           key={c.id}
-                          className="flex items-center gap-1 text-xs bg-white border border-gray-200 rounded px-1.5 py-0.5 truncate mb-0.5"
+                          onClick={() => openEditModal(c)}
+                          className="flex items-center gap-1 text-xs bg-white border border-gray-200 rounded px-1.5 py-0.5 truncate mb-0.5 cursor-pointer hover:bg-gray-50"
                         >
                           <span className="truncate">{c.title.length > 14 ? c.title.slice(0, 14) + '...' : c.title}</span>
                           <Mail className="h-3 w-3 text-gray-400 shrink-0" />
@@ -612,6 +813,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                       {items.map((c) => (
                         <div
                           key={c.id}
+                          onClick={() => openEditModal(c)}
                           className="flex items-center gap-1 text-xs bg-white border border-gray-200 rounded px-1.5 py-0.5 truncate mb-0.5 cursor-pointer hover:bg-gray-50"
                         >
                           <span className="truncate">
@@ -751,7 +953,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
                     {/* name + description */}
                     <td className="px-4 py-4 max-w-sm">
-                      <button className="text-left">
+                      <button className="text-left" onClick={() => openEditModal(c)}>
                         <span className="text-blue-600 hover:underline font-medium block leading-snug">
                           {c.title}
                         </span>
@@ -816,7 +1018,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                           <div className="fixed inset-0 z-40" onClick={() => setOpenMenu(null)} />
                           <div className="absolute right-4 top-10 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-40">
                             <button
-                              onClick={() => setOpenMenu(null)}
+                              onClick={() => openEditModal(c)}
                               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                             >
                               Edit
