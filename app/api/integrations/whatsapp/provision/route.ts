@@ -46,31 +46,32 @@ export async function POST(request: NextRequest) {
       select: { name: true },
     })
 
-    // Step 1: Search for available phone numbers with SMS capability
-    let availableNumbers
-    try {
-      availableNumbers = await client.availablePhoneNumbers(countryCode)
-        .local
-        .list({
-          smsEnabled: true,
-          limit: 1,
-        })
+    // Step 1: Search for available phone numbers
+    // Try mobile first (available in most countries), then local as fallback
+    let availableNumbers: any[] = []
+    const numberTypes = ['mobile', 'local', 'tollFree'] as const
 
-      // If no local numbers, try mobile
-      if (availableNumbers.length === 0) {
+    for (const numberType of numberTypes) {
+      if (availableNumbers.length > 0) break
+      try {
         availableNumbers = await client.availablePhoneNumbers(countryCode)
-          .mobile
+          [numberType]
           .list({
             smsEnabled: true,
             limit: 1,
           })
+      } catch (searchError: any) {
+        // 404 means this number type doesn't exist for this country — try next type
+        if (searchError.status === 404) {
+          console.log(`Twilio: No ${numberType} numbers available for ${countryCode}, trying next type...`)
+          continue
+        }
+        console.error('Twilio search error:', searchError)
+        return NextResponse.json(
+          { error: `Fout bij het zoeken naar nummers voor ${countryCode}. Probeer het later opnieuw.` },
+          { status: 400 }
+        )
       }
-    } catch (searchError: any) {
-      console.error('Twilio search error:', searchError)
-      return NextResponse.json(
-        { error: `Geen beschikbare nummers gevonden voor ${countryCode}. Probeer een ander land.` },
-        { status: 400 }
-      )
     }
 
     if (!availableNumbers || availableNumbers.length === 0) {
