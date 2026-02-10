@@ -551,32 +551,31 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 />
               </div>
 
-              {/* Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Verzenddatum <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={formData.sendDate}
-                  onChange={(e) => setFormData({ ...formData, sendDate: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  required
-                />
-              </div>
-
-              {/* End Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Einddatum
-                </label>
-                <input
-                  type="date"
-                  value={formData.endDate}
-                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-                <p className="mt-1 text-xs text-gray-400">Tot wanneer kunnen ambassadeurs deze campagne voltooien</p>
+              {/* Dates side by side */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Verzenddatum <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.sendDate}
+                    onChange={(e) => setFormData({ ...formData, sendDate: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Einddatum
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.endDate}
+                    onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                </div>
               </div>
 
               {/* Points */}
@@ -707,32 +706,31 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </select>
               </div>
 
-              {/* Send Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Verzenddatum <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="date"
-                  value={editFormData.sendDate}
-                  onChange={(e) => setEditFormData({ ...editFormData, sendDate: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  required
-                />
-              </div>
-
-              {/* End Date */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Einddatum
-                </label>
-                <input
-                  type="date"
-                  value={editFormData.endDate}
-                  onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                />
-                <p className="mt-1 text-xs text-gray-400">Tot wanneer kunnen ambassadeurs deze campagne voltooien</p>
+              {/* Dates side by side */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Verzenddatum <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={editFormData.sendDate}
+                    onChange={(e) => setEditFormData({ ...editFormData, sendDate: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Einddatum
+                  </label>
+                  <input
+                    type="date"
+                    value={editFormData.endDate}
+                    onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
+                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  />
+                </div>
               </div>
 
               {/* Points */}
