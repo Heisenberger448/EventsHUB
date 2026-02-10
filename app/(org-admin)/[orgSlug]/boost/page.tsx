@@ -64,10 +64,12 @@ export default function BoostPage() {
                   <div className="bg-gray-900 rounded-full p-3 mb-3 shadow-lg">
                     <Lock className="h-6 w-6 text-white" />
                   </div>
-                  <span className="text-sm font-semibold text-gray-700">Binnenkort beschikbaar</span>
-                  <button className="mt-3 px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors cursor-not-allowed" disabled>
-                    Meer info
-                  </button>
+                  <a
+                    href="mailto:sales@sharedcrowd.com?subject=Boost%20-%20${encodeURIComponent(card.title)}"
+                    className="mt-1 px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    Contact Sales
+                  </a>
                 </div>
 
                 {/* Card content (behind lock) */}
