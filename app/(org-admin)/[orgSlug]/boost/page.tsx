@@ -1,6 +1,6 @@
 'use client'
 
-import { TrendingUp, Megaphone, Star, Zap, Lock } from 'lucide-react'
+import { TrendingUp, Megaphone, Star, Zap } from 'lucide-react'
 
 export default function BoostPage() {
   const boostCards = [
@@ -57,22 +57,8 @@ export default function BoostPage() {
             return (
               <div
                 key={card.title}
-                className={`relative bg-white rounded-xl border ${colors.border} overflow-hidden opacity-75 select-none`}
+                className={`relative bg-white rounded-xl border ${colors.border} overflow-hidden`}
               >
-                {/* Locked overlay */}
-                <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[1px] flex flex-col items-center justify-center">
-                  <div className="bg-gray-900 rounded-full p-3 mb-3 shadow-lg">
-                    <Lock className="h-6 w-6 text-white" />
-                  </div>
-                  <a
-                    href="mailto:sales@sharedcrowd.com?subject=Boost%20-%20${encodeURIComponent(card.title)}"
-                    className="mt-1 px-5 py-2.5 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
-                  >
-                    Contact Sales
-                  </a>
-                </div>
-
-                {/* Card content (behind lock) */}
                 <div className={`${colors.bg} px-6 pt-6 pb-4`}>
                   <div className="flex items-center justify-between mb-3">
                     <div className={`${colors.iconBg} rounded-xl p-2.5`}>
@@ -89,11 +75,6 @@ export default function BoostPage() {
                 <div className="px-6 py-5">
                   <p className="text-sm text-gray-500 leading-relaxed mb-4">{card.description}</p>
 
-                  <div className="flex items-baseline gap-1 mb-4">
-                    <span className="text-3xl font-bold text-gray-900">{card.price}</span>
-                    <span className="text-sm text-gray-400">{card.period}</span>
-                  </div>
-
                   <ul className="space-y-2.5">
                     {card.features.map((f) => (
                       <li key={f} className="flex items-center gap-2 text-sm text-gray-600">
@@ -102,7 +83,12 @@ export default function BoostPage() {
                       </li>
                     ))}
                   </ul>
-                </div>
+                  <a
+                    href={`mailto:sales@sharedcrowd.com?subject=Boost%20-%20${encodeURIComponent(card.title)}`}
+                    className={`mt-5 w-full inline-flex items-center justify-center px-5 py-2.5 ${colors.badge} text-white text-sm font-medium rounded-lg hover:opacity-90 transition-opacity`}
+                  >
+                    Contact Sales
+                  </a>                </div>
               </div>
             )
           })}
