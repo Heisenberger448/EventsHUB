@@ -98,6 +98,11 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [currentDate, setCurrentDate] = useState(new Date())
   const today = useMemo(() => new Date(), [])
 
+  /* ── filter state ─────────────────────────────── */
+  const [statusFilter, setStatusFilter] = useState<string>('ALL')
+  const [showArchived, setShowArchived] = useState(false)
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false)
+
   /* ── create modal state ───────────────────────── */
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [formData, setFormData] = useState({ title: '', description: '', sendDate: '', endDate: '', rewardPoints: '' })
@@ -236,11 +241,21 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   }
 
   /* filter */
-  const filtered = campaigns.filter(
-    (c) =>
+  const filtered = campaigns.filter((c) => {
+    // Text search
+    const matchesSearch =
       c.title.toLowerCase().includes(search.toLowerCase()) ||
       c.description.toLowerCase().includes(search.toLowerCase())
-  )
+    if (!matchesSearch) return false
+
+    // Status filter
+    if (statusFilter !== 'ALL' && c.status !== statusFilter) return false
+
+    // Archived: if showArchived is off, hide ARCHIVED campaigns
+    if (!showArchived && c.status === 'ARCHIVED') return false
+
+    return true
+  })
 
   const allSelected = filtered.length > 0 && filtered.every((c) => selectedIds.has(c.id))
 
@@ -871,10 +886,49 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           Channels
           <ChevronDown className="h-3.5 w-3.5" />
         </button>
-        <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
-          Status
-          <ChevronDown className="h-3.5 w-3.5" />
-        </button>
+        {/* Status dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+            className={`flex items-center gap-1.5 px-3 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 ${
+              statusFilter !== 'ALL'
+                ? 'border-blue-300 bg-blue-50 text-blue-700'
+                : 'border-gray-300 text-gray-700'
+            }`}
+          >
+            Status{statusFilter !== 'ALL' ? `: ${statusFilter}` : ''}
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+          {showStatusDropdown && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setShowStatusDropdown(false)} />
+              <div className="absolute top-full left-0 mt-1 z-50 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-44">
+                {[
+                  { value: 'ALL', label: 'Alle statussen' },
+                  { value: 'DRAFT', label: 'Draft' },
+                  { value: 'ACTIVE', label: 'Active' },
+                  { value: 'COMPLETED', label: 'Completed' },
+                  { value: 'ARCHIVED', label: 'Archived' },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => {
+                      setStatusFilter(opt.value)
+                      setShowStatusDropdown(false)
+                      if (opt.value === 'ARCHIVED') setShowArchived(true)
+                    }}
+                    className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-50 ${
+                      statusFilter === opt.value ? 'text-blue-600 font-medium bg-blue-50' : 'text-gray-700'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
         <button className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
           Tags
           <ChevronDown className="h-3.5 w-3.5" />
@@ -882,8 +936,15 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
         <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
           A/B test
         </button>
-        <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">
-          Archived
+        <button
+          onClick={() => setShowArchived(!showArchived)}
+          className={`px-3 py-2 border rounded-lg text-sm font-medium transition-colors ${
+            showArchived
+              ? 'border-yellow-300 bg-yellow-50 text-yellow-700'
+              : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+          }`}
+        >
+          Archived{showArchived ? ' ✓' : ''}
         </button>
 
         {/* Filter icon */}
