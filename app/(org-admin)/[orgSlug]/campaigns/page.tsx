@@ -18,7 +18,117 @@ import {
   CheckCircle2,
   X,
   Loader2,
+  Phone,
+  Wifi,
+  Battery,
+  Signal,
+  Camera,
+  Mic,
+  Smile,
+  Paperclip,
 } from 'lucide-react'
+
+/* ── iPhone WhatsApp Preview ───────────────────────────────── */
+function WhatsAppPreview({ message, campaignTitle }: { message: string; campaignTitle: string }) {
+  const now = new Date()
+  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-6">
+      <p className="text-xs text-gray-400 mb-3 font-medium">Live WhatsApp preview</p>
+      {/* iPhone frame */}
+      <div className="relative w-[280px] h-[560px] bg-black rounded-[40px] p-[3px] shadow-2xl">
+        {/* Inner bezel */}
+        <div className="w-full h-full bg-black rounded-[37px] overflow-hidden flex flex-col">
+          {/* Dynamic Island / notch */}
+          <div className="flex items-center justify-center pt-2 pb-0 bg-black">
+            <div className="w-[90px] h-[25px] bg-black rounded-full" />
+          </div>
+
+          {/* Status bar */}
+          <div className="flex items-center justify-between px-5 py-1 bg-[#075E54] text-white text-[10px]">
+            <span className="font-medium">{timeStr}</span>
+            <div className="flex items-center gap-1">
+              <Signal className="h-2.5 w-2.5" />
+              <Wifi className="h-2.5 w-2.5" />
+              <Battery className="h-3 w-3" />
+            </div>
+          </div>
+
+          {/* WhatsApp header */}
+          <div className="flex items-center gap-2 px-3 py-2 bg-[#075E54] text-white">
+            <ChevronLeft className="h-4 w-4" />
+            <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
+              <span className="text-xs font-bold text-gray-600">SC</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium leading-tight truncate">SharedCrowd</p>
+              <p className="text-[10px] text-green-200">online</p>
+            </div>
+            <Camera className="h-4 w-4 opacity-80" />
+            <Phone className="h-4 w-4 opacity-80" />
+          </div>
+
+          {/* Chat area */}
+          <div className="flex-1 bg-[#ECE5DD] px-3 py-3 overflow-y-auto"
+               style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'200\' height=\'200\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'p\' width=\'40\' height=\'40\' patternUnits=\'userSpaceOnUse\'%3E%3Ccircle cx=\'20\' cy=\'20\' r=\'1\' fill=\'%23d4ccc4\' opacity=\'0.3\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'200\' height=\'200\' fill=\'url(%23p)\'/%3E%3C/svg%3E")' }}>
+            {/* Date badge */}
+            <div className="flex justify-center mb-3">
+              <span className="bg-white/80 text-[10px] text-gray-500 px-3 py-0.5 rounded-full shadow-sm">
+                Vandaag
+              </span>
+            </div>
+
+            {/* Incoming message */}
+            <div className="flex justify-start mb-2">
+              <div className="bg-white rounded-lg rounded-tl-none px-3 py-1.5 max-w-[85%] shadow-sm">
+                {message ? (
+                  <p className="text-[12px] text-gray-800 whitespace-pre-wrap break-words leading-relaxed">
+                    {message}
+                  </p>
+                ) : (
+                  <p className="text-[12px] text-gray-400 italic">
+                    Typ een beschrijving om de preview te zien...
+                  </p>
+                )}
+                <div className="flex justify-end mt-0.5">
+                  <span className="text-[9px] text-gray-400">{timeStr}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Reply bubble (ambassador) */}
+            {message && (
+              <div className="flex justify-end mb-2">
+                <div className="bg-[#DCF8C6] rounded-lg rounded-tr-none px-3 py-1.5 max-w-[75%] shadow-sm">
+                  <p className="text-[12px] text-gray-800">Ik doe mee! 🙌</p>
+                  <div className="flex items-center justify-end gap-0.5 mt-0.5">
+                    <span className="text-[9px] text-gray-400">{timeStr}</span>
+                    <span className="text-[9px] text-blue-500">✓✓</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Input bar */}
+          <div className="flex items-center gap-1.5 px-2 py-2 bg-[#F0F0F0]">
+            <Smile className="h-4 w-4 text-gray-500" />
+            <div className="flex-1 bg-white rounded-full px-3 py-1.5 text-[11px] text-gray-400">
+              Typ een bericht
+            </div>
+            <Camera className="h-4 w-4 text-gray-500" />
+          </div>
+
+          {/* Home indicator */}
+          <div className="flex justify-center py-1.5 bg-[#F0F0F0]">
+            <div className="w-24 h-1 bg-gray-800 rounded-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 import { useEventContext } from '@/contexts/EventContext'
 
 /* ── types ─────────────────────────────────────────────────── */
@@ -384,17 +494,20 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
       {/* ── Create Campaign Modal ──────────────────── */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col">
             {/* header */}
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200 shrink-0">
               <h2 className="text-xl font-semibold text-gray-900">Nieuwe campaign</h2>
               <button onClick={() => setShowCreateModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* body */}
-            <form onSubmit={handleCreate} className="p-6 space-y-5">
+            {/* two-column body */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* LEFT: form */}
+              <div className="flex-1 overflow-y-auto border-r border-gray-200">
+                <form onSubmit={handleCreate} className="p-6 space-y-5">
               {/* Event badge */}
               {selectedEvent ? (
                 <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
@@ -514,6 +627,13 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </button>
               </div>
             </form>
+              </div>
+
+              {/* RIGHT: iPhone WhatsApp preview */}
+              <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto">
+                <WhatsAppPreview message={formData.description} campaignTitle={formData.title} />
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -521,17 +641,20 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
       {/* ── Edit Campaign Modal ────────────────────── */}
       {showEditModal && editingCampaign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col">
             {/* header */}
-            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200">
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200 shrink-0">
               <h2 className="text-xl font-semibold text-gray-900">Campaign bewerken</h2>
               <button onClick={() => { setShowEditModal(false); setEditingCampaign(null) }} className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            {/* body */}
-            <form onSubmit={handleUpdate} className="p-6 space-y-5">
+            {/* two-column body */}
+            <div className="flex flex-1 overflow-hidden">
+              {/* LEFT: form */}
+              <div className="flex-1 overflow-y-auto border-r border-gray-200">
+                <form onSubmit={handleUpdate} className="p-6 space-y-5">
               {/* Event badge (read-only) */}
               <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
                 <Calendar className="h-4 w-4" />
@@ -658,6 +781,13 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </button>
               </div>
             </form>
+              </div>
+
+              {/* RIGHT: iPhone WhatsApp preview */}
+              <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto">
+                <WhatsAppPreview message={editFormData.description} campaignTitle={editFormData.title} />
+              </div>
+            </div>
           </div>
         </div>
       )}
