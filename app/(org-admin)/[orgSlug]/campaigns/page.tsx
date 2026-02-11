@@ -327,6 +327,12 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [editSubmitting, setEditSubmitting] = useState(false)
   const [editFormError, setEditFormError] = useState('')
 
+  /* ── edit notification toggles ─────────────────── */
+  const [editNotifyWhatsApp, setEditNotifyWhatsApp] = useState(false)
+  const [editNotifyApplication, setEditNotifyApplication] = useState(false)
+  const [editNotifyAppNotification, setEditNotifyAppNotification] = useState(false)
+  const [editPreviewTab, setEditPreviewTab] = useState<'whatsapp' | 'appnotification'>('whatsapp')
+
   /* ── fetch campaigns ──────────────────────────── */
   const fetchCampaigns = useCallback(async () => {
     setLoading(true)
@@ -879,6 +885,74 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 />
               </div>
 
+              {/* Notification Toggles */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Meldingen versturen via
+                </label>
+                <div className="flex gap-3">
+                  {/* WhatsApp */}
+                  <button
+                    type="button"
+                    onClick={() => setEditNotifyWhatsApp(!editNotifyWhatsApp)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                      editNotifyWhatsApp
+                        ? 'bg-green-50 border-green-500 text-green-700'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-8 h-5 rounded-full relative transition-colors ${
+                      editNotifyWhatsApp ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        editNotifyWhatsApp ? 'translate-x-3.5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                    WhatsApp
+                  </button>
+
+                  {/* Application */}
+                  <button
+                    type="button"
+                    onClick={() => setEditNotifyApplication(!editNotifyApplication)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                      editNotifyApplication
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-8 h-5 rounded-full relative transition-colors ${
+                      editNotifyApplication ? 'bg-blue-500' : 'bg-gray-300'
+                    }`}>
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        editNotifyApplication ? 'translate-x-3.5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                    Application
+                  </button>
+
+                  {/* App Notification */}
+                  <button
+                    type="button"
+                    onClick={() => setEditNotifyAppNotification(!editNotifyAppNotification)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                      editNotifyAppNotification
+                        ? 'bg-purple-50 border-purple-500 text-purple-700'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-8 h-5 rounded-full relative transition-colors ${
+                      editNotifyAppNotification ? 'bg-purple-500' : 'bg-gray-300'
+                    }`}>
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        editNotifyAppNotification ? 'translate-x-3.5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                    App Notification
+                  </button>
+                </div>
+              </div>
+
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -985,10 +1059,47 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
             </form>
               </div>
 
-              {/* RIGHT: iPhone WhatsApp preview */}
-              <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto">
-                <WhatsAppPreview message={editFormData.description} campaignTitle={editFormData.title} />
+              {/* RIGHT: Live preview panel */}
+              {(editNotifyWhatsApp || editNotifyAppNotification) && (
+              <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto flex flex-col">
+                {/* Tab switcher – only show when both are enabled */}
+                {editNotifyWhatsApp && editNotifyAppNotification && (
+                  <div className="flex border-b border-gray-200 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setEditPreviewTab('whatsapp')}
+                      className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors ${
+                        editPreviewTab === 'whatsapp'
+                          ? 'text-green-700 border-b-2 border-green-500 bg-green-50/50'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditPreviewTab('appnotification')}
+                      className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors ${
+                        editPreviewTab === 'appnotification'
+                          ? 'text-purple-700 border-b-2 border-purple-500 bg-purple-50/50'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      App Notification
+                    </button>
+                  </div>
+                )}
+
+                {/* Preview content */}
+                <div className="flex-1">
+                  {(editNotifyWhatsApp && !editNotifyAppNotification) || (editNotifyWhatsApp && editPreviewTab === 'whatsapp') ? (
+                    <WhatsAppPreview message={editFormData.description} campaignTitle={editFormData.title} />
+                  ) : (
+                    <AppNotificationPreview message={editFormData.description} campaignTitle={editFormData.title} />
+                  )}
+                </div>
               </div>
+              )}
             </div>
           </div>
         </div>
