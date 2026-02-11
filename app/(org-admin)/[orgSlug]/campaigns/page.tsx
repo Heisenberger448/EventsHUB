@@ -442,14 +442,24 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   /* ── open edit modal ──────────────────────────── */
   const openEditModal = (campaign: Campaign) => {
     setEditingCampaign(campaign)
+    // Convert UTC dates to local datetime-local format (YYYY-MM-DDTHH:mm)
+    const toLocalDatetimeString = (dateStr: string) => {
+      const d = new Date(dateStr)
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, '0')
+      const day = String(d.getDate()).padStart(2, '0')
+      const hours = String(d.getHours()).padStart(2, '0')
+      const minutes = String(d.getMinutes()).padStart(2, '0')
+      return `${year}-${month}-${day}T${hours}:${minutes}`
+    }
     setEditFormData({
       title: campaign.title,
       notificationTitle: campaign.notificationTitle || '',
       notificationMessage: campaign.notificationMessage || '',
       whatsappMessage: campaign.whatsappMessage || '',
       description: campaign.description,
-      sendDate: campaign.startDate ? new Date(campaign.startDate).toISOString().slice(0, 16) : '',
-      endDate: campaign.endDate ? new Date(campaign.endDate).toISOString().slice(0, 16) : '',
+      sendDate: campaign.startDate ? toLocalDatetimeString(campaign.startDate) : '',
+      endDate: campaign.endDate ? toLocalDatetimeString(campaign.endDate) : '',
       rewardPoints: String(campaign.rewardPoints || 0),
       status: campaign.status,
     })
