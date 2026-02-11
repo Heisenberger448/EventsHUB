@@ -6,6 +6,20 @@ import { sendPushNotifications } from '@/lib/apns'
 async function processScheduledCampaigns() {
   const now = new Date()
 
+  // Debug: log all campaigns to understand why none match
+  const allCampaigns = await prisma.campaign.findMany({
+    select: {
+      id: true,
+      title: true,
+      status: true,
+      sendAppNotification: true,
+      sentAt: true,
+      startDate: true,
+    },
+  })
+  console.log(`🔍 Debug - Current time (UTC): ${now.toISOString()}`)
+  console.log(`🔍 Debug - All campaigns:`, JSON.stringify(allCampaigns, null, 2))
+
   // Find campaigns that are ACTIVE, have sendAppNotification enabled,
   // startDate has passed, and haven't been sent yet
   const campaignsToSend = await prisma.campaign.findMany({
@@ -40,7 +54,24 @@ async function processScheduledCampaigns() {
   })
 
   if (campaignsToSend.length === 0) {
-    return { message: 'Geen campagnes om te versturen', sent: 0, campaigns: 0 }
+    return { 
+      message: 'Geen campagnes om te versturen', 
+      sent: 0, 
+      campaigns: 0,
+      debug: {
+        currentTimeUTC: now.toISOString(),
+        totalCampaignsInDB: allCampaigns.length,
+        allCampaigns: allCampaigns.map(c => ({
+          id: c.id,
+          title: c.title,
+          status: c.status,
+          sendAppNotification: c.sendAppNotification,
+          sentAt: c.sentAt,
+          startDate: c.startDate,
+          startDatePassed: c.startDate ? new Date(c.startDate) <= now : null,
+        })),
+      },
+    }
   }
 
   let totalNotificationsSent = 0
