@@ -448,8 +448,8 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
       notificationMessage: campaign.notificationMessage || '',
       whatsappMessage: campaign.whatsappMessage || '',
       description: campaign.description,
-      sendDate: campaign.startDate ? new Date(campaign.startDate).toISOString().split('T')[0] : '',
-      endDate: campaign.endDate ? new Date(campaign.endDate).toISOString().split('T')[0] : '',
+      sendDate: campaign.startDate ? new Date(campaign.startDate).toISOString().slice(0, 16) : '',
+      endDate: campaign.endDate ? new Date(campaign.endDate).toISOString().slice(0, 16) : '',
       rewardPoints: String(campaign.rewardPoints || 0),
       status: campaign.status,
     })
@@ -751,7 +751,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                     Verzenddatum <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={formData.sendDate}
                     onChange={(e) => setFormData({ ...formData, sendDate: e.target.value })}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -763,7 +763,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                     Einddatum
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={formData.endDate}
                     onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -1078,7 +1078,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                     Verzenddatum <span className="text-red-500">*</span>
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={editFormData.sendDate}
                     onChange={(e) => setEditFormData({ ...editFormData, sendDate: e.target.value })}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
@@ -1090,7 +1090,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                     Einddatum
                   </label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={editFormData.endDate}
                     onChange={(e) => setEditFormData({ ...editFormData, endDate: e.target.value })}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
