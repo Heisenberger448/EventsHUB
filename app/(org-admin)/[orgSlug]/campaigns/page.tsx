@@ -225,6 +225,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false)
   const [notifyApplication, setNotifyApplication] = useState(false)
   const [notifyAppNotification, setNotifyAppNotification] = useState(false)
+  const [previewTab, setPreviewTab] = useState<'whatsapp' | 'appnotification'>('whatsapp')
 
   /* ── edit modal state ─────────────────────────── */
   const [showEditModal, setShowEditModal] = useState(false)
@@ -701,10 +702,47 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
             </form>
               </div>
 
-              {/* RIGHT: iPhone WhatsApp preview */}
-              <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto">
-                <WhatsAppPreview message={formData.description} campaignTitle={formData.title} />
+              {/* RIGHT: Live preview panel */}
+              {(notifyWhatsApp || notifyAppNotification) && (
+              <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto flex flex-col">
+                {/* Tab switcher – only show when both are enabled */}
+                {notifyWhatsApp && notifyAppNotification && (
+                  <div className="flex border-b border-gray-200 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab('whatsapp')}
+                      className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors ${
+                        previewTab === 'whatsapp'
+                          ? 'text-green-700 border-b-2 border-green-500 bg-green-50/50'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      WhatsApp
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPreviewTab('appnotification')}
+                      className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors ${
+                        previewTab === 'appnotification'
+                          ? 'text-purple-700 border-b-2 border-purple-500 bg-purple-50/50'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                      }`}
+                    >
+                      App Notification
+                    </button>
+                  </div>
+                )}
+
+                {/* Preview content */}
+                <div className="flex-1">
+                  {(notifyWhatsApp && !notifyAppNotification) || (notifyWhatsApp && previewTab === 'whatsapp') ? (
+                    <WhatsAppPreview message={formData.description} campaignTitle={formData.title} />
+                  ) : (
+                    <AppNotificationPreview message={formData.description} campaignTitle={formData.title} />
+                  )}
+                </div>
               </div>
+              )}
             </div>
           </div>
         </div>
