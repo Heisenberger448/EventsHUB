@@ -344,7 +344,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
   /* ── create modal state ───────────────────────── */
   const [showCreateModal, setShowCreateModal] = useState(false)
-  const [formData, setFormData] = useState({ title: '', description: '', sendDate: '', endDate: '', rewardPoints: '' })
+  const [formData, setFormData] = useState({ title: '', notificationTitle: '', description: '', sendDate: '', endDate: '', rewardPoints: '' })
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
@@ -358,7 +358,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   /* ── edit modal state ─────────────────────────── */
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
-  const [editFormData, setEditFormData] = useState({ title: '', description: '', sendDate: '', endDate: '', rewardPoints: '', status: '' })
+  const [editFormData, setEditFormData] = useState({ title: '', notificationTitle: '', description: '', sendDate: '', endDate: '', rewardPoints: '', status: '' })
   const [editSubmitting, setEditSubmitting] = useState(false)
   const [editFormError, setEditFormError] = useState('')
 
@@ -418,7 +418,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
         throw new Error(data.error || 'Aanmaken mislukt')
       }
       setShowCreateModal(false)
-      setFormData({ title: '', description: '', sendDate: '', endDate: '', rewardPoints: '' })
+      setFormData({ title: '', notificationTitle: '', description: '', sendDate: '', endDate: '', rewardPoints: '' })
       fetchCampaigns()
     } catch (err: any) {
       setFormError(err.message)
@@ -432,6 +432,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
     setEditingCampaign(campaign)
     setEditFormData({
       title: campaign.title,
+      notificationTitle: '',
       description: campaign.description,
       sendDate: campaign.startDate ? new Date(campaign.startDate).toISOString().split('T')[0] : '',
       endDate: campaign.endDate ? new Date(campaign.endDate).toISOString().split('T')[0] : '',
@@ -623,7 +624,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
             </button>
           </div>
           <button
-            onClick={() => { setFormData({ title: '', description: '', sendDate: '', endDate: '', rewardPoints: '' }); setFormError(''); setShowCreateModal(true) }}
+            onClick={() => { setFormData({ title: '', notificationTitle: '', description: '', sendDate: '', endDate: '', rewardPoints: '' }); setFormError(''); setShowCreateModal(true) }}
             className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 flex items-center gap-1.5"
           >
             <Plus className="h-4 w-4" />
@@ -870,8 +871,8 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                         <label className="block text-sm font-medium text-gray-700 mb-1">Notificatie titel</label>
                         <input
                           type="text"
-                          value={formData.title}
-                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          value={formData.notificationTitle}
+                          onChange={(e) => setFormData({ ...formData, notificationTitle: e.target.value })}
                           placeholder="Titel van de push notificatie"
                           className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
                         />
@@ -938,7 +939,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   {formTab === 'whatsapp' ? (
                     <WhatsAppPreview message={formData.description} campaignTitle={formData.title} />
                   ) : formTab === 'appnotification' ? (
-                    <AppNotificationPreview message={formData.description} campaignTitle={formData.title} />
+                    <AppNotificationPreview message={formData.description} campaignTitle={formData.notificationTitle} />
                   ) : (
                     <ApplicationPreview />
                   )}
@@ -1195,8 +1196,8 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                         <label className="block text-sm font-medium text-gray-700 mb-1">Notificatie titel</label>
                         <input
                           type="text"
-                          value={editFormData.title}
-                          onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                          value={editFormData.notificationTitle}
+                          onChange={(e) => setEditFormData({ ...editFormData, notificationTitle: e.target.value })}
                           placeholder="Titel van de push notificatie"
                           className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
                         />
@@ -1263,7 +1264,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   {editFormTab === 'whatsapp' ? (
                     <WhatsAppPreview message={editFormData.description} campaignTitle={editFormData.title} />
                   ) : editFormTab === 'appnotification' ? (
-                    <AppNotificationPreview message={editFormData.description} campaignTitle={editFormData.title} />
+                    <AppNotificationPreview message={editFormData.description} campaignTitle={editFormData.notificationTitle} />
                   ) : (
                     <ApplicationPreview />
                   )}
