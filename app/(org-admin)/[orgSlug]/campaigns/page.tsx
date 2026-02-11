@@ -265,6 +265,9 @@ interface Campaign {
   notificationTitle: string | null
   notificationMessage: string | null
   whatsappMessage: string | null
+  sendWhatsApp: boolean
+  sendAppNotification: boolean
+  sendInApp: boolean
   description: string
   startDate: string
   endDate: string
@@ -412,6 +415,9 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           notificationTitle: formData.notificationTitle,
           notificationMessage: formData.notificationMessage,
           whatsappMessage: formData.whatsappMessage,
+          sendWhatsApp: notifyWhatsApp,
+          sendAppNotification: notifyAppNotification,
+          sendInApp: notifyApplication,
           description: formData.description,
           startDate: formData.sendDate,
           endDate: formData.endDate || formData.sendDate,
@@ -447,6 +453,9 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
       rewardPoints: String(campaign.rewardPoints || 0),
       status: campaign.status,
     })
+    setEditNotifyWhatsApp(campaign.sendWhatsApp ?? false)
+    setEditNotifyApplication(campaign.sendInApp ?? false)
+    setEditNotifyAppNotification(campaign.sendAppNotification ?? false)
     setEditFormError('')
     setShowEditModal(true)
     setOpenMenu(null)
@@ -467,6 +476,9 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           notificationTitle: editFormData.notificationTitle,
           notificationMessage: editFormData.notificationMessage,
           whatsappMessage: editFormData.whatsappMessage,
+          sendWhatsApp: editNotifyWhatsApp,
+          sendAppNotification: editNotifyAppNotification,
+          sendInApp: editNotifyApplication,
           description: editFormData.description,
           startDate: editFormData.sendDate,
           endDate: editFormData.endDate || editFormData.sendDate,

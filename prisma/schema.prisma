@@ -95,6 +95,9 @@ model Campaign {
   notificationTitle   String?
   notificationMessage String?
   whatsappMessage     String?
+  sendWhatsApp        Boolean  @default(false)
+  sendAppNotification Boolean  @default(false)
+  sendInApp           Boolean  @default(false)
   description         String
   startDate         DateTime
   endDate           DateTime
