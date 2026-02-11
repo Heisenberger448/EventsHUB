@@ -222,6 +222,40 @@ function AppNotificationPreview({ message, campaignTitle }: { message: string; c
   )
 }
 
+/* ── iPhone Application Preview (placeholder) ─────────────── */
+function ApplicationPreview() {
+  const now = new Date()
+  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+  const dateStr = `${['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'][now.getDay()]} ${now.getDate()} ${['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'][now.getMonth()]}`
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-6">
+      <p className="text-xs text-gray-400 mb-3 font-medium">Live Application preview</p>
+      {/* iPhone frame */}
+      <div className="relative w-[280px] h-[560px] bg-black rounded-[40px] p-[3px] shadow-2xl">
+        {/* Inner bezel */}
+        <div className="w-full h-full bg-black rounded-[37px] overflow-hidden flex flex-col">
+          {/* Dynamic Island */}
+          <div className="flex items-center justify-center pt-2 pb-0 bg-black">
+            <div className="w-[90px] h-[25px] bg-[#1a1a1a] rounded-full" />
+          </div>
+
+          {/* Screen */}
+          <div className="flex-1 bg-black flex flex-col items-center justify-center">
+            <p className="text-white text-[52px] font-light leading-none">{timeStr}</p>
+            <p className="text-white/60 text-sm mt-2 capitalize">{dateStr}</p>
+          </div>
+
+          {/* Home indicator */}
+          <div className="flex justify-center pb-2 bg-black">
+            <div className="w-24 h-1 bg-white/30 rounded-full" />
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 import { useEventContext } from '@/contexts/EventContext'
 
 /* ── types ─────────────────────────────────────────────────── */
@@ -601,7 +635,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
       {/* ── Create Campaign Modal ──────────────────── */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 h-[85vh] flex flex-col">
             {/* header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200 shrink-0">
               <h2 className="text-xl font-semibold text-gray-900">Nieuwe campaign</h2>
@@ -966,13 +1000,15 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
               </div>
 
               {/* RIGHT: Live preview panel – driven by left tabs */}
-              {(formTab === 'whatsapp' || formTab === 'appnotification') && (
+              {(formTab === 'whatsapp' || formTab === 'applicatie' || formTab === 'appnotification') && (
               <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto flex flex-col">
                 <div className="flex-1">
                   {formTab === 'whatsapp' ? (
                     <WhatsAppPreview message={formData.description} campaignTitle={formData.title} />
-                  ) : (
+                  ) : formTab === 'appnotification' ? (
                     <AppNotificationPreview message={formData.description} campaignTitle={formData.title} />
+                  ) : (
+                    <ApplicationPreview />
                   )}
                 </div>
               </div>
@@ -985,7 +1021,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
       {/* ── Edit Campaign Modal ────────────────────── */}
       {showEditModal && editingCampaign && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-5xl mx-4 h-[85vh] flex flex-col">
             {/* header */}
             <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-200 shrink-0">
               <h2 className="text-xl font-semibold text-gray-900">Campaign bewerken</h2>
@@ -1357,13 +1393,15 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
               </div>
 
               {/* RIGHT: Live preview panel – driven by left tabs */}
-              {(editFormTab === 'whatsapp' || editFormTab === 'appnotification') && (
+              {(editFormTab === 'whatsapp' || editFormTab === 'applicatie' || editFormTab === 'appnotification') && (
               <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto flex flex-col">
                 <div className="flex-1">
                   {editFormTab === 'whatsapp' ? (
                     <WhatsAppPreview message={editFormData.description} campaignTitle={editFormData.title} />
-                  ) : (
+                  ) : editFormTab === 'appnotification' ? (
                     <AppNotificationPreview message={editFormData.description} campaignTitle={editFormData.title} />
+                  ) : (
+                    <ApplicationPreview />
                   )}
                 </div>
               </div>
