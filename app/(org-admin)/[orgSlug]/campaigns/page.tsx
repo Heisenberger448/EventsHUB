@@ -129,6 +129,99 @@ function WhatsAppPreview({ message, campaignTitle }: { message: string; campaign
     </div>
   )
 }
+
+/* ── iPhone App Notification Preview ────────────────────────── */
+function AppNotificationPreview({ message, campaignTitle }: { message: string; campaignTitle: string }) {
+  const now = new Date()
+  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+  const dateStr = `${now.getDate()} ${['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'][now.getMonth()]}`
+
+  return (
+    <div className="flex flex-col items-center justify-center h-full py-6">
+      <p className="text-xs text-gray-400 mb-3 font-medium">Live App Notification preview</p>
+      {/* iPhone frame */}
+      <div className="relative w-[280px] h-[560px] bg-black rounded-[40px] p-[3px] shadow-2xl">
+        {/* Inner bezel */}
+        <div className="w-full h-full bg-black rounded-[37px] overflow-hidden flex flex-col">
+          {/* Dynamic Island */}
+          <div className="flex items-center justify-center pt-2 pb-0 bg-black">
+            <div className="w-[90px] h-[25px] bg-black rounded-full" />
+          </div>
+
+          {/* Lock screen */}
+          <div className="flex-1 bg-gradient-to-b from-[#1a1a2e] via-[#16213e] to-[#0f3460] flex flex-col">
+            {/* Status bar */}
+            <div className="flex items-center justify-between px-5 py-1 text-white text-[10px]">
+              <span className="font-medium">{timeStr}</span>
+              <div className="flex items-center gap-1">
+                <Signal className="h-2.5 w-2.5" />
+                <Wifi className="h-2.5 w-2.5" />
+                <Battery className="h-3 w-3" />
+              </div>
+            </div>
+
+            {/* Clock & Date */}
+            <div className="flex flex-col items-center mt-8 mb-6">
+              <p className="text-white text-[48px] font-light leading-none">{timeStr}</p>
+              <p className="text-white/70 text-sm mt-1 capitalize">
+                {['zondag','maandag','dinsdag','woensdag','donderdag','vrijdag','zaterdag'][now.getDay()]} {dateStr}
+              </p>
+            </div>
+
+            {/* Notification card */}
+            <div className="px-4 space-y-2">
+              <div className="bg-white/20 backdrop-blur-xl rounded-2xl p-3 shadow-lg border border-white/10">
+                {/* App icon + header */}
+                <div className="flex items-center gap-2 mb-1.5">
+                  <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-white">SC</span>
+                  </div>
+                  <span className="text-[10px] text-white/70 font-medium uppercase tracking-wide">SharedCrowd</span>
+                  <span className="text-[10px] text-white/50 ml-auto">nu</span>
+                </div>
+                {/* Notification content */}
+                <p className="text-[13px] text-white font-semibold leading-tight">
+                  {campaignTitle || 'Nieuwe Campaign'}
+                </p>
+                {message ? (
+                  <p className="text-[11px] text-white/80 mt-0.5 leading-snug line-clamp-3">
+                    {message}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-white/50 italic mt-0.5">
+                    Typ een beschrijving om de preview te zien...
+                  </p>
+                )}
+              </div>
+
+              {/* Older notification (static) */}
+              <div className="bg-white/10 backdrop-blur-xl rounded-2xl p-3 border border-white/5">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-6 h-6 rounded-md bg-blue-500 flex items-center justify-center">
+                    <span className="text-[8px] font-bold text-white">SC</span>
+                  </div>
+                  <span className="text-[10px] text-white/50 font-medium uppercase tracking-wide">SharedCrowd</span>
+                  <span className="text-[10px] text-white/40 ml-auto">2u geleden</span>
+                </div>
+                <p className="text-[12px] text-white/60 font-medium">Welkom bij SharedCrowd! 🎉</p>
+                <p className="text-[10px] text-white/40 mt-0.5">Je bent toegevoegd als ambassadeur.</p>
+              </div>
+            </div>
+
+            {/* Spacer */}
+            <div className="flex-1" />
+
+            {/* Bottom bar indicators */}
+            <div className="flex justify-center pb-2">
+              <div className="w-24 h-1 bg-white/30 rounded-full" />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 import { useEventContext } from '@/contexts/EventContext'
 
 /* ── types ─────────────────────────────────────────────────── */
