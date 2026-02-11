@@ -262,6 +262,7 @@ import { useEventContext } from '@/contexts/EventContext'
 interface Campaign {
   id: string
   title: string
+  notificationTitle: string | null
   description: string
   startDate: string
   endDate: string
@@ -406,6 +407,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
         body: JSON.stringify({
           eventId: selectedEvent.id,
           title: formData.title,
+          notificationTitle: formData.notificationTitle,
           description: formData.description,
           startDate: formData.sendDate,
           endDate: formData.endDate || formData.sendDate,
@@ -432,7 +434,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
     setEditingCampaign(campaign)
     setEditFormData({
       title: campaign.title,
-      notificationTitle: '',
+      notificationTitle: campaign.notificationTitle || '',
       description: campaign.description,
       sendDate: campaign.startDate ? new Date(campaign.startDate).toISOString().split('T')[0] : '',
       endDate: campaign.endDate ? new Date(campaign.endDate).toISOString().split('T')[0] : '',
@@ -456,6 +458,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: editFormData.title,
+          notificationTitle: editFormData.notificationTitle,
           description: editFormData.description,
           startDate: editFormData.sendDate,
           endDate: editFormData.endDate || editFormData.sendDate,

@@ -76,7 +76,7 @@ export async function POST(
     }
 
     const body = await req.json()
-    const { eventId, title, description, startDate, endDate, rewardPoints, status } = body
+    const { eventId, title, notificationTitle, description, startDate, endDate, rewardPoints, status } = body
 
     if (!eventId || !title || !description || !startDate || !endDate || rewardPoints === undefined) {
       return NextResponse.json(
@@ -104,6 +104,7 @@ export async function POST(
       data: {
         eventId,
         title,
+        notificationTitle: notificationTitle || null,
         description,
         startDate: new Date(startDate),
         endDate: new Date(endDate),

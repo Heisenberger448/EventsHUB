@@ -89,16 +89,17 @@ model Event {
 }
 
 model Campaign {
-  id           String         @id @default(cuid())
-  eventId      String
-  title        String
-  description  String
-  startDate    DateTime
-  endDate      DateTime
-  rewardPoints Int
-  status       CampaignStatus @default(DRAFT)
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id                String         @id @default(cuid())
+  eventId           String
+  title             String
+  notificationTitle String?
+  description       String
+  startDate         DateTime
+  endDate           DateTime
+  rewardPoints      Int
+  status            CampaignStatus @default(DRAFT)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
   
   event        Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
   completions  AmbassadorCampaign[]
