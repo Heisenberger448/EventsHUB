@@ -638,7 +638,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                <form onSubmit={handleCreate} className="p-6 space-y-5">
+                <form onSubmit={handleCreate} id="createCampaignForm" className="p-6 space-y-5">
 
               {/* ── Tab: Algemeen ── */}
               {formTab === 'algemeen' && (
@@ -935,9 +935,11 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   <p className="text-sm text-red-800">{formError}</p>
                 </div>
               )}
+            </form>
+              </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 pt-2">
+              {/* Actions pinned to bottom */}
+              <div className="flex gap-3 px-6 py-4 border-t border-gray-200 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
@@ -947,6 +949,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </button>
                 <button
                   type="submit"
+                  form="createCampaignForm"
                   disabled={submitting || !selectedEvent}
                   className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
@@ -960,44 +963,13 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   )}
                 </button>
               </div>
-            </form>
-              </div>
               </div>
 
-              {/* RIGHT: Live preview panel */}
-              {(notifyWhatsApp || notifyAppNotification) && (
+              {/* RIGHT: Live preview panel – driven by left tabs */}
+              {(formTab === 'whatsapp' || formTab === 'appnotification') && (
               <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto flex flex-col">
-                {/* Tab switcher – only show when both are enabled */}
-                {notifyWhatsApp && notifyAppNotification && (
-                  <div className="flex border-b border-gray-200 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewTab('whatsapp')}
-                      className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors ${
-                        previewTab === 'whatsapp'
-                          ? 'text-green-700 border-b-2 border-green-500 bg-green-50/50'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      WhatsApp
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPreviewTab('appnotification')}
-                      className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors ${
-                        previewTab === 'appnotification'
-                          ? 'text-purple-700 border-b-2 border-purple-500 bg-purple-50/50'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      App Notification
-                    </button>
-                  </div>
-                )}
-
-                {/* Preview content */}
                 <div className="flex-1">
-                  {(notifyWhatsApp && !notifyAppNotification) || (notifyWhatsApp && previewTab === 'whatsapp') ? (
+                  {formTab === 'whatsapp' ? (
                     <WhatsAppPreview message={formData.description} campaignTitle={formData.title} />
                   ) : (
                     <AppNotificationPreview message={formData.description} campaignTitle={formData.title} />
@@ -1050,7 +1022,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
-                <form onSubmit={handleUpdate} className="p-6 space-y-5">
+                <form onSubmit={handleUpdate} id="editCampaignForm" className="p-6 space-y-5">
 
               {/* ── Tab: Algemeen ── */}
               {editFormTab === 'algemeen' && (
@@ -1354,9 +1326,11 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   <p className="text-sm text-red-800">{editFormError}</p>
                 </div>
               )}
+            </form>
+              </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 pt-2">
+              {/* Actions pinned to bottom */}
+              <div className="flex gap-3 px-6 py-4 border-t border-gray-200 shrink-0">
                 <button
                   type="button"
                   onClick={() => { setShowEditModal(false); setEditingCampaign(null) }}
@@ -1366,6 +1340,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </button>
                 <button
                   type="submit"
+                  form="editCampaignForm"
                   disabled={editSubmitting}
                   className="flex-1 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center gap-2"
                 >
@@ -1379,44 +1354,13 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   )}
                 </button>
               </div>
-            </form>
-              </div>
               </div>
 
-              {/* RIGHT: Live preview panel */}
-              {(editNotifyWhatsApp || editNotifyAppNotification) && (
+              {/* RIGHT: Live preview panel – driven by left tabs */}
+              {(editFormTab === 'whatsapp' || editFormTab === 'appnotification') && (
               <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto flex flex-col">
-                {/* Tab switcher – only show when both are enabled */}
-                {editNotifyWhatsApp && editNotifyAppNotification && (
-                  <div className="flex border-b border-gray-200 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => setEditPreviewTab('whatsapp')}
-                      className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors ${
-                        editPreviewTab === 'whatsapp'
-                          ? 'text-green-700 border-b-2 border-green-500 bg-green-50/50'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      WhatsApp
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditPreviewTab('appnotification')}
-                      className={`flex-1 py-2.5 text-xs font-medium text-center transition-colors ${
-                        editPreviewTab === 'appnotification'
-                          ? 'text-purple-700 border-b-2 border-purple-500 bg-purple-50/50'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
-                      }`}
-                    >
-                      App Notification
-                    </button>
-                  </div>
-                )}
-
-                {/* Preview content */}
                 <div className="flex-1">
-                  {(editNotifyWhatsApp && !editNotifyAppNotification) || (editNotifyWhatsApp && editPreviewTab === 'whatsapp') ? (
+                  {editFormTab === 'whatsapp' ? (
                     <WhatsAppPreview message={editFormData.description} campaignTitle={editFormData.title} />
                   ) : (
                     <AppNotificationPreview message={editFormData.description} campaignTitle={editFormData.title} />
