@@ -319,6 +319,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [notifyApplication, setNotifyApplication] = useState(false)
   const [notifyAppNotification, setNotifyAppNotification] = useState(false)
   const [previewTab, setPreviewTab] = useState<'whatsapp' | 'appnotification'>('whatsapp')
+  const [formTab, setFormTab] = useState<'algemeen' | 'whatsapp' | 'applicatie' | 'appnotification'>('algemeen')
 
   /* ── edit modal state ─────────────────────────── */
   const [showEditModal, setShowEditModal] = useState(false)
@@ -332,6 +333,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [editNotifyApplication, setEditNotifyApplication] = useState(false)
   const [editNotifyAppNotification, setEditNotifyAppNotification] = useState(false)
   const [editPreviewTab, setEditPreviewTab] = useState<'whatsapp' | 'appnotification'>('whatsapp')
+  const [editFormTab, setEditFormTab] = useState<'algemeen' | 'whatsapp' | 'applicatie' | 'appnotification'>('algemeen')
 
   /* ── fetch campaigns ──────────────────────────── */
   const fetchCampaigns = useCallback(async () => {
@@ -610,9 +612,37 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
             {/* two-column body */}
             <div className="flex flex-1 overflow-hidden">
-              {/* LEFT: form */}
-              <div className="flex-1 overflow-y-auto border-r border-gray-200">
+              {/* LEFT: form with tabs */}
+              <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-200">
+                {/* Tab navigation */}
+                <div className="flex border-b border-gray-200 shrink-0">
+                  {([
+                    { key: 'algemeen', label: 'Algemeen' },
+                    { key: 'whatsapp', label: 'WhatsApp' },
+                    { key: 'applicatie', label: 'Applicatie' },
+                    { key: 'appnotification', label: 'App Notification' },
+                  ] as const).map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setFormTab(tab.key)}
+                      className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${
+                        formTab === tab.key
+                          ? 'text-blue-700 border-b-2 border-blue-500 bg-blue-50/50'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
                 <form onSubmit={handleCreate} className="p-6 space-y-5">
+
+              {/* ── Tab: Algemeen ── */}
+              {formTab === 'algemeen' && (
+                <>
               {/* Event badge */}
               {selectedEvent ? (
                 <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
@@ -766,6 +796,138 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 />
                 <p className="mt-1 text-xs text-gray-400">Aantal punten dat een ambassadeur verdient bij voltooiing</p>
               </div>
+                </>
+              )}
+
+              {/* ── Tab: WhatsApp ── */}
+              {formTab === 'whatsapp' && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                      <span className="text-white text-lg">💬</span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-green-800">WhatsApp Bericht</h3>
+                      <p className="text-xs text-green-600 mt-0.5">Configureer het WhatsApp bericht dat naar ambassadeurs wordt gestuurd</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNotifyWhatsApp(!notifyWhatsApp)}
+                      className={`ml-auto w-10 h-6 rounded-full relative transition-colors ${notifyWhatsApp ? 'bg-green-500' : 'bg-gray-300'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${notifyWhatsApp ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {notifyWhatsApp && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp bericht</label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          placeholder="Het bericht dat via WhatsApp wordt verstuurd..."
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                          rows={5}
+                        />
+                        <p className="mt-1 text-xs text-gray-400">Dit bericht wordt naar alle ambassadeurs gestuurd via WhatsApp</p>
+                      </div>
+                    </>
+                  )}
+                  {!notifyWhatsApp && (
+                    <p className="text-sm text-gray-500 italic">WhatsApp meldingen zijn uitgeschakeld. Schakel ze in om instellingen te configureren.</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Tab: Applicatie ── */}
+              {formTab === 'applicatie' && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                      <span className="text-white text-lg">📱</span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-blue-800">Applicatie</h3>
+                      <p className="text-xs text-blue-600 mt-0.5">Configureer hoe de campaign in de app wordt weergegeven</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNotifyApplication(!notifyApplication)}
+                      className={`ml-auto w-10 h-6 rounded-full relative transition-colors ${notifyApplication ? 'bg-blue-500' : 'bg-gray-300'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${notifyApplication ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {notifyApplication && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">In-app bericht</label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          placeholder="Het bericht dat in de applicatie wordt getoond..."
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          rows={5}
+                        />
+                        <p className="mt-1 text-xs text-gray-400">Dit bericht wordt weergegeven in de SharedCrowd app</p>
+                      </div>
+                    </>
+                  )}
+                  {!notifyApplication && (
+                    <p className="text-sm text-gray-500 italic">Applicatie meldingen zijn uitgeschakeld. Schakel ze in om instellingen te configureren.</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Tab: App Notification ── */}
+              {formTab === 'appnotification' && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center shrink-0">
+                      <span className="text-white text-lg">🔔</span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-purple-800">App Notification</h3>
+                      <p className="text-xs text-purple-600 mt-0.5">Configureer de push notificatie die ambassadeurs ontvangen</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNotifyAppNotification(!notifyAppNotification)}
+                      className={`ml-auto w-10 h-6 rounded-full relative transition-colors ${notifyAppNotification ? 'bg-purple-500' : 'bg-gray-300'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${notifyAppNotification ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {notifyAppNotification && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notificatie titel</label>
+                        <input
+                          type="text"
+                          value={formData.title}
+                          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                          placeholder="Titel van de push notificatie"
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notificatie bericht</label>
+                        <textarea
+                          value={formData.description}
+                          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                          placeholder="Het bericht in de push notificatie..."
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                          rows={4}
+                        />
+                        <p className="mt-1 text-xs text-gray-400">Dit wordt getoond als push notificatie op het toestel van de ambassadeur</p>
+                      </div>
+                    </>
+                  )}
+                  {!notifyAppNotification && (
+                    <p className="text-sm text-gray-500 italic">App notificaties zijn uitgeschakeld. Schakel ze in om instellingen te configureren.</p>
+                  )}
+                </div>
+              )}
 
               {/* Error */}
               {formError && (
@@ -799,6 +961,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </button>
               </div>
             </form>
+              </div>
               </div>
 
               {/* RIGHT: Live preview panel */}
@@ -861,9 +1024,37 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
             {/* two-column body */}
             <div className="flex flex-1 overflow-hidden">
-              {/* LEFT: form */}
-              <div className="flex-1 overflow-y-auto border-r border-gray-200">
+              {/* LEFT: form with tabs */}
+              <div className="flex-1 flex flex-col overflow-hidden border-r border-gray-200">
+                {/* Tab navigation */}
+                <div className="flex border-b border-gray-200 shrink-0">
+                  {([
+                    { key: 'algemeen', label: 'Algemeen' },
+                    { key: 'whatsapp', label: 'WhatsApp' },
+                    { key: 'applicatie', label: 'Applicatie' },
+                    { key: 'appnotification', label: 'App Notification' },
+                  ] as const).map((tab) => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setEditFormTab(tab.key)}
+                      className={`flex-1 py-2.5 text-sm font-medium text-center transition-colors ${
+                        editFormTab === tab.key
+                          ? 'text-blue-700 border-b-2 border-blue-500 bg-blue-50/50'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex-1 overflow-y-auto">
                 <form onSubmit={handleUpdate} className="p-6 space-y-5">
+
+              {/* ── Tab: Algemeen ── */}
+              {editFormTab === 'algemeen' && (
+                <>
               {/* Event badge (read-only) */}
               <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm text-gray-600">
                 <Calendar className="h-4 w-4" />
@@ -1024,6 +1215,138 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 />
               </div>
+                </>
+              )}
+
+              {/* ── Tab: WhatsApp ── */}
+              {editFormTab === 'whatsapp' && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                      <span className="text-white text-lg">💬</span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-green-800">WhatsApp Bericht</h3>
+                      <p className="text-xs text-green-600 mt-0.5">Configureer het WhatsApp bericht dat naar ambassadeurs wordt gestuurd</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditNotifyWhatsApp(!editNotifyWhatsApp)}
+                      className={`ml-auto w-10 h-6 rounded-full relative transition-colors ${editNotifyWhatsApp ? 'bg-green-500' : 'bg-gray-300'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${editNotifyWhatsApp ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {editNotifyWhatsApp && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">WhatsApp bericht</label>
+                        <textarea
+                          value={editFormData.description}
+                          onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                          placeholder="Het bericht dat via WhatsApp wordt verstuurd..."
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-sm"
+                          rows={5}
+                        />
+                        <p className="mt-1 text-xs text-gray-400">Dit bericht wordt naar alle ambassadeurs gestuurd via WhatsApp</p>
+                      </div>
+                    </>
+                  )}
+                  {!editNotifyWhatsApp && (
+                    <p className="text-sm text-gray-500 italic">WhatsApp meldingen zijn uitgeschakeld. Schakel ze in om instellingen te configureren.</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Tab: Applicatie ── */}
+              {editFormTab === 'applicatie' && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center shrink-0">
+                      <span className="text-white text-lg">📱</span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-blue-800">Applicatie</h3>
+                      <p className="text-xs text-blue-600 mt-0.5">Configureer hoe de campaign in de app wordt weergegeven</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditNotifyApplication(!editNotifyApplication)}
+                      className={`ml-auto w-10 h-6 rounded-full relative transition-colors ${editNotifyApplication ? 'bg-blue-500' : 'bg-gray-300'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${editNotifyApplication ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {editNotifyApplication && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">In-app bericht</label>
+                        <textarea
+                          value={editFormData.description}
+                          onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                          placeholder="Het bericht dat in de applicatie wordt getoond..."
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                          rows={5}
+                        />
+                        <p className="mt-1 text-xs text-gray-400">Dit bericht wordt weergegeven in de SharedCrowd app</p>
+                      </div>
+                    </>
+                  )}
+                  {!editNotifyApplication && (
+                    <p className="text-sm text-gray-500 italic">Applicatie meldingen zijn uitgeschakeld. Schakel ze in om instellingen te configureren.</p>
+                  )}
+                </div>
+              )}
+
+              {/* ── Tab: App Notification ── */}
+              {editFormTab === 'appnotification' && (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                    <div className="w-10 h-10 rounded-full bg-purple-500 flex items-center justify-center shrink-0">
+                      <span className="text-white text-lg">🔔</span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-purple-800">App Notification</h3>
+                      <p className="text-xs text-purple-600 mt-0.5">Configureer de push notificatie die ambassadeurs ontvangen</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setEditNotifyAppNotification(!editNotifyAppNotification)}
+                      className={`ml-auto w-10 h-6 rounded-full relative transition-colors ${editNotifyAppNotification ? 'bg-purple-500' : 'bg-gray-300'}`}
+                    >
+                      <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${editNotifyAppNotification ? 'translate-x-5' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {editNotifyAppNotification && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notificatie titel</label>
+                        <input
+                          type="text"
+                          value={editFormData.title}
+                          onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                          placeholder="Titel van de push notificatie"
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Notificatie bericht</label>
+                        <textarea
+                          value={editFormData.description}
+                          onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                          placeholder="Het bericht in de push notificatie..."
+                          className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                          rows={4}
+                        />
+                        <p className="mt-1 text-xs text-gray-400">Dit wordt getoond als push notificatie op het toestel van de ambassadeur</p>
+                      </div>
+                    </>
+                  )}
+                  {!editNotifyAppNotification && (
+                    <p className="text-sm text-gray-500 italic">App notificaties zijn uitgeschakeld. Schakel ze in om instellingen te configureren.</p>
+                  )}
+                </div>
+              )}
 
               {/* Error */}
               {editFormError && (
@@ -1057,6 +1380,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 </button>
               </div>
             </form>
+              </div>
               </div>
 
               {/* RIGHT: Live preview panel */}
