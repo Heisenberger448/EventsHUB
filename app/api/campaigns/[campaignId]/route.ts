@@ -58,7 +58,7 @@ export async function PATCH(
 ) {
   try {
     const body = await req.json()
-    const { title, notificationTitle, notificationMessage, description, startDate, endDate, rewardPoints, status } = body
+    const { title, notificationTitle, notificationMessage, whatsappMessage, description, startDate, endDate, rewardPoints, status } = body
 
     const campaign = await prisma.campaign.update({
       where: { id: params.campaignId },
@@ -66,6 +66,7 @@ export async function PATCH(
         ...(title && { title }),
         ...(notificationTitle !== undefined && { notificationTitle: notificationTitle || null }),
         ...(notificationMessage !== undefined && { notificationMessage: notificationMessage || null }),
+        ...(whatsappMessage !== undefined && { whatsappMessage: whatsappMessage || null }),
         ...(description && { description }),
         ...(startDate && { startDate: new Date(startDate) }),
         ...(endDate && { endDate: new Date(endDate) }),

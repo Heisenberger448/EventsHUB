@@ -94,6 +94,7 @@ model Campaign {
   title             String
   notificationTitle   String?
   notificationMessage String?
+  whatsappMessage     String?
   description         String
   startDate         DateTime
   endDate           DateTime
