@@ -221,6 +221,11 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
+  /* ── notification toggles ─────────────────────── */
+  const [notifyWhatsApp, setNotifyWhatsApp] = useState(false)
+  const [notifyApplication, setNotifyApplication] = useState(false)
+  const [notifyAppNotification, setNotifyAppNotification] = useState(false)
+
   /* ── edit modal state ─────────────────────────── */
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
@@ -534,6 +539,74 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   required
                   autoFocus
                 />
+              </div>
+
+              {/* Notification Toggles */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Meldingen versturen via
+                </label>
+                <div className="flex gap-3">
+                  {/* WhatsApp */}
+                  <button
+                    type="button"
+                    onClick={() => setNotifyWhatsApp(!notifyWhatsApp)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                      notifyWhatsApp
+                        ? 'bg-green-50 border-green-500 text-green-700'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-8 h-5 rounded-full relative transition-colors ${
+                      notifyWhatsApp ? 'bg-green-500' : 'bg-gray-300'
+                    }`}>
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        notifyWhatsApp ? 'translate-x-3.5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                    WhatsApp
+                  </button>
+
+                  {/* Application */}
+                  <button
+                    type="button"
+                    onClick={() => setNotifyApplication(!notifyApplication)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                      notifyApplication
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-8 h-5 rounded-full relative transition-colors ${
+                      notifyApplication ? 'bg-blue-500' : 'bg-gray-300'
+                    }`}>
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        notifyApplication ? 'translate-x-3.5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                    Application
+                  </button>
+
+                  {/* App Notification */}
+                  <button
+                    type="button"
+                    onClick={() => setNotifyAppNotification(!notifyAppNotification)}
+                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border text-sm font-medium transition-colors ${
+                      notifyAppNotification
+                        ? 'bg-purple-50 border-purple-500 text-purple-700'
+                        : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className={`w-8 h-5 rounded-full relative transition-colors ${
+                      notifyAppNotification ? 'bg-purple-500' : 'bg-gray-300'
+                    }`}>
+                      <div className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
+                        notifyAppNotification ? 'translate-x-3.5' : 'translate-x-0.5'
+                      }`} />
+                    </div>
+                    App Notification
+                  </button>
+                </div>
               </div>
 
               {/* Description */}
