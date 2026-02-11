@@ -744,6 +744,19 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 />
               </div>
 
+              {/* Audience */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Doelgroep <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value="all"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="all">Alle Ambassadeurs</option>
+                </select>
+              </div>
+
               {/* Dates side by side */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -1068,6 +1081,19 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                   <option value="ACTIVE">Active</option>
                   <option value="COMPLETED">Completed</option>
                   <option value="ARCHIVED">Archived</option>
+                </select>
+              </div>
+
+              {/* Audience */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Doelgroep <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value="all"
+                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                >
+                  <option value="all">Alle Ambassadeurs</option>
                 </select>
               </div>
 
