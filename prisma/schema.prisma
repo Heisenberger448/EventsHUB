@@ -92,8 +92,9 @@ model Campaign {
   id                String         @id @default(cuid())
   eventId           String
   title             String
-  notificationTitle String?
-  description       String
+  notificationTitle   String?
+  notificationMessage String?
+  description         String
   startDate         DateTime
   endDate           DateTime
   rewardPoints      Int
