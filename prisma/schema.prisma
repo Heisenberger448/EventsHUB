@@ -35,6 +35,7 @@ model Organization {
   slug           String   @unique
   kvkNumber      String?
   companyAddress String?
+  timezone       String   @default("Europe/Amsterdam")
   createdAt      DateTime @default(now())
   
   users     User[]

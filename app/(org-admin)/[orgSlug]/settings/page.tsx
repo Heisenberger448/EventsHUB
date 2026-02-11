@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Calendar, Trash2, Loader2, MessageCircle, Phone, Plus, X, Users, Shield, ShieldCheck, Eye, EyeOff, CheckCircle2, ExternalLink, AlertCircle, Unplug, Globe } from 'lucide-react'
+import { Calendar, Trash2, Loader2, MessageCircle, Phone, Plus, X, Users, Shield, ShieldCheck, Eye, EyeOff, CheckCircle2, ExternalLink, AlertCircle, Unplug, Globe, Settings, Clock, Check } from 'lucide-react'
 import { useEventContext } from '@/contexts/EventContext'
 import { useSession } from 'next-auth/react'
 
@@ -40,10 +40,35 @@ interface WhatsAppIntegration {
 
 type WhatsAppStep = 'choice' | 'connect' | 'verifying' | 'success' | 'provision-country' | 'provisioning'
 
-type SettingsTab = 'events' | 'integrations' | 'users'
+type SettingsTab = 'algemeen' | 'events' | 'integrations' | 'users'
+
+const TIMEZONES = [
+  { value: 'Europe/Amsterdam', label: 'Europa/Amsterdam (CET/CEST)' },
+  { value: 'Europe/London', label: 'Europa/London (GMT/BST)' },
+  { value: 'Europe/Paris', label: 'Europa/Parijs (CET/CEST)' },
+  { value: 'Europe/Berlin', label: 'Europa/Berlijn (CET/CEST)' },
+  { value: 'Europe/Brussels', label: 'Europa/Brussel (CET/CEST)' },
+  { value: 'Europe/Madrid', label: 'Europa/Madrid (CET/CEST)' },
+  { value: 'Europe/Rome', label: 'Europa/Rome (CET/CEST)' },
+  { value: 'Europe/Zurich', label: 'Europa/Zürich (CET/CEST)' },
+  { value: 'Europe/Istanbul', label: 'Europa/Istanbul (TRT)' },
+  { value: 'Europe/Moscow', label: 'Europa/Moskou (MSK)' },
+  { value: 'America/New_York', label: 'Amerika/New York (EST/EDT)' },
+  { value: 'America/Chicago', label: 'Amerika/Chicago (CST/CDT)' },
+  { value: 'America/Denver', label: 'Amerika/Denver (MST/MDT)' },
+  { value: 'America/Los_Angeles', label: 'Amerika/Los Angeles (PST/PDT)' },
+  { value: 'America/Sao_Paulo', label: 'Amerika/São Paulo (BRT)' },
+  { value: 'Asia/Dubai', label: 'Azië/Dubai (GST)' },
+  { value: 'Asia/Kolkata', label: 'Azië/Kolkata (IST)' },
+  { value: 'Asia/Shanghai', label: 'Azië/Shanghai (CST)' },
+  { value: 'Asia/Tokyo', label: 'Azië/Tokio (JST)' },
+  { value: 'Australia/Sydney', label: 'Australië/Sydney (AEST/AEDT)' },
+  { value: 'Pacific/Auckland', label: 'Pacific/Auckland (NZST/NZDT)' },
+  { value: 'UTC', label: 'UTC' },
+]
 
 export default function SettingsPage({ params }: { params: { orgSlug: string } }) {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('events')
+  const [activeTab, setActiveTab] = useState<SettingsTab>('algemeen')
   const { data: session } = useSession()
 
   /* Events state */
@@ -83,9 +108,16 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
   const [showWaToken, setShowWaToken] = useState(false)
   const [provisionCountry, setProvisionCountry] = useState('NL')
 
+  /* Algemeen (General) state */
+  const [orgTimezone, setOrgTimezone] = useState('Europe/Amsterdam')
+  const [loadingOrgSettings, setLoadingOrgSettings] = useState(false)
+  const [savingOrgSettings, setSavingOrgSettings] = useState(false)
+  const [orgSettingsSaved, setOrgSettingsSaved] = useState(false)
+
   useEffect(() => {
     fetchEvents()
     fetchWhatsAppStatus()
+    fetchOrgSettings()
   }, [])
 
   useEffect(() => {
@@ -288,7 +320,43 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
     }
   }
 
+  const fetchOrgSettings = async () => {
+    setLoadingOrgSettings(true)
+    try {
+      const res = await fetch(`/api/organizations/${params.orgSlug}/settings`)
+      if (res.ok) {
+        const data = await res.json()
+        setOrgTimezone(data.timezone || 'Europe/Amsterdam')
+      }
+    } catch (err) {
+      console.error('Failed to fetch org settings:', err)
+    } finally {
+      setLoadingOrgSettings(false)
+    }
+  }
+
+  const saveOrgSettings = async () => {
+    setSavingOrgSettings(true)
+    setOrgSettingsSaved(false)
+    try {
+      const res = await fetch(`/api/organizations/${params.orgSlug}/settings`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ timezone: orgTimezone }),
+      })
+      if (res.ok) {
+        setOrgSettingsSaved(true)
+        setTimeout(() => setOrgSettingsSaved(false), 3000)
+      }
+    } catch (err) {
+      console.error('Failed to save org settings:', err)
+    } finally {
+      setSavingOrgSettings(false)
+    }
+  }
+
   const tabs: { id: SettingsTab; label: string }[] = [
+    { id: 'algemeen', label: 'Algemeen' },
     { id: 'events', label: 'Events' },
     { id: 'integrations', label: 'Integrations' },
     { id: 'users', label: 'Users' },
@@ -317,6 +385,70 @@ export default function SettingsPage({ params }: { params: { orgSlug: string } }
           </button>
         ))}
       </div>
+
+      {activeTab === 'algemeen' && (
+        /* ── Algemeen Tab ── */
+        <div className="bg-white border border-gray-200 rounded-xl">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-gray-100 rounded-lg">
+                <Settings className="w-5 h-5 text-gray-600" />
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Algemene instellingen</h2>
+                <p className="text-sm text-gray-500 mt-0.5">Configureer de basisinstellingen van je organisatie</p>
+              </div>
+            </div>
+          </div>
+          <div className="p-6 space-y-6">
+            {/* Timezone */}
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
+                <Clock className="w-4 h-4 text-gray-400" />
+                Tijdzone
+              </label>
+              <p className="text-sm text-gray-500 mb-3">
+                Stel de tijdzone in voor je organisatie. Dit wordt gebruikt voor het plannen van campagnes en notificaties.
+              </p>
+              {loadingOrgSettings ? (
+                <div className="flex items-center gap-2 text-sm text-gray-500">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Laden...
+                </div>
+              ) : (
+                <select
+                  value={orgTimezone}
+                  onChange={(e) => { setOrgTimezone(e.target.value); setOrgSettingsSaved(false) }}
+                  className="w-full max-w-md border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                >
+                  {TIMEZONES.map((tz) => (
+                    <option key={tz.value} value={tz.value}>
+                      {tz.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Save button */}
+            <div className="pt-4 border-t border-gray-200">
+              <button
+                onClick={saveOrgSettings}
+                disabled={savingOrgSettings}
+                className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {savingOrgSettings ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Opslaan...</>
+                ) : orgSettingsSaved ? (
+                  <><Check className="w-4 h-4" /> Opgeslagen</>
+                ) : (
+                  'Opslaan'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {activeTab === 'events' && (
         /* ── Events Tab ── */
