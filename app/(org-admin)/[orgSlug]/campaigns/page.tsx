@@ -356,6 +356,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
   /* ── notification toggles ─────────────────────── */
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false)
+  const [whatsappShop, setWhatsappShop] = useState(false)
   const [notifyApplication, setNotifyApplication] = useState(false)
   const [notifyAppNotification, setNotifyAppNotification] = useState(false)
   const [previewTab, setPreviewTab] = useState<'whatsapp' | 'appnotification'>('whatsapp')
@@ -370,6 +371,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
 
   /* ── edit notification toggles ─────────────────── */
   const [editNotifyWhatsApp, setEditNotifyWhatsApp] = useState(false)
+  const [editWhatsappShop, setEditWhatsappShop] = useState(false)
   const [editNotifyApplication, setEditNotifyApplication] = useState(false)
   const [editNotifyAppNotification, setEditNotifyAppNotification] = useState(false)
   const [editPreviewTab, setEditPreviewTab] = useState<'whatsapp' | 'appnotification'>('whatsapp')
@@ -844,6 +846,19 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                         />
                         <p className="mt-1 text-xs text-gray-400">Dit bericht wordt naar alle ambassadeurs gestuurd via WhatsApp</p>
                       </div>
+                      <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700">WhatsApp Shop</h4>
+                          <p className="text-xs text-gray-400 mt-0.5">Voeg een WhatsApp Shop link toe aan het bericht</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setWhatsappShop(!whatsappShop)}
+                          className={`w-10 h-6 rounded-full relative transition-colors ${whatsappShop ? 'bg-green-500' : 'bg-gray-300'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${whatsappShop ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
                     </>
                   )}
                   {!notifyWhatsApp && (
@@ -1181,6 +1196,19 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                           rows={5}
                         />
                         <p className="mt-1 text-xs text-gray-400">Dit bericht wordt naar alle ambassadeurs gestuurd via WhatsApp</p>
+                      </div>
+                      <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700">WhatsApp Shop</h4>
+                          <p className="text-xs text-gray-400 mt-0.5">Voeg een WhatsApp Shop link toe aan het bericht</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setEditWhatsappShop(!editWhatsappShop)}
+                          className={`w-10 h-6 rounded-full relative transition-colors ${editWhatsappShop ? 'bg-green-500' : 'bg-gray-300'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${editWhatsappShop ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
                       </div>
                     </>
                   )}
