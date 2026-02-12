@@ -36,6 +36,7 @@ export default function LibraryPage() {
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [selectedAsset, setSelectedAsset] = useState<MediaAsset | null>(null)
+  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const tabs: { key: TabKey; label: string }[] = [
@@ -92,14 +93,20 @@ export default function LibraryPage() {
           formData.append('category', 'general')
         }
 
-        await fetch('/api/library', {
+        const res = await fetch('/api/library', {
           method: 'POST',
           body: formData,
         })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error(data.error || `Upload failed with status ${res.status}`)
+        }
       }
+      setError(null)
       await fetchAssets()
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload failed:', err)
+      setError(err.message || 'Upload failed. Please try again.')
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -181,6 +188,16 @@ export default function LibraryPage() {
 
         {/* Search + Upload row */}
         <div className="flex items-center justify-between mb-6">
+
+          {/* Error banner */}
+          {error && (
+            <div className="fixed top-4 right-4 z-50 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg shadow-lg flex items-center gap-3 max-w-md">
+              <p className="text-sm flex-1">{error}</p>
+              <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input

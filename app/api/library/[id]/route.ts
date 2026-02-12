@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { unlink } from 'fs/promises'
-import path from 'path'
+import { deleteFromSpaces, getKeyFromUrl } from '@/lib/spaces'
 
 export async function DELETE(
   request: NextRequest,
@@ -23,12 +22,12 @@ export async function DELETE(
       return NextResponse.json({ error: 'Media asset not found' }, { status: 404 })
     }
 
-    // Delete file from disk
+    // Delete file from DO Spaces
     try {
-      const filePath = path.join(process.cwd(), 'public', asset.fileUrl)
-      await unlink(filePath)
+      const key = getKeyFromUrl(asset.fileUrl)
+      await deleteFromSpaces(key)
     } catch (err) {
-      console.warn('Could not delete file from disk:', err)
+      console.warn('Could not delete file from Spaces:', err)
     }
 
     // Delete from database

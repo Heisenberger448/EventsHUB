@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { writeFile, mkdir } from 'fs/promises'
-import path from 'path'
+import { uploadToSpaces } from '@/lib/spaces'
 import { randomUUID } from 'crypto'
+import path from 'path'
 
 export async function GET(request: NextRequest) {
   try {
@@ -98,22 +98,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Only images and videos are supported' }, { status: 400 })
     }
 
-    // Create upload directory
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'library', organization.id)
-    await mkdir(uploadDir, { recursive: true })
-
-    // Generate unique filename
+    // Generate unique filename and upload to DO Spaces
     const ext = path.extname(file.name)
     const uniqueName = `${randomUUID()}${ext}`
-    const filePath = path.join(uploadDir, uniqueName)
+    const spacesKey = `library/${organization.id}/${uniqueName}`
 
-    // Write file to disk
     const bytes = await file.arrayBuffer()
     const buffer = Buffer.from(bytes)
-    await writeFile(filePath, buffer)
 
-    // Save to database
-    const fileUrl = `/uploads/library/${organization.id}/${uniqueName}`
+    const fileUrl = await uploadToSpaces(buffer, spacesKey, mimeType)
     const asset = await prisma.mediaAsset.create({
       data: {
         organizationId: organization.id,
