@@ -37,6 +37,14 @@ export async function GET(
             slug: true
           }
         },
+        media: {
+          include: {
+            mediaAsset: true
+          },
+          orderBy: {
+            sortOrder: 'asc'
+          }
+        },
         _count: {
           select: {
             completions: true
@@ -76,7 +84,7 @@ export async function POST(
     }
 
     const body = await req.json()
-    const { eventId, title, notificationTitle, notificationMessage, whatsappMessage, sendWhatsApp, sendAppNotification, sendInApp, description, startDate, endDate, rewardPoints, status } = body
+    const { eventId, title, notificationTitle, notificationMessage, whatsappMessage, sendWhatsApp, sendAppNotification, sendInApp, description, startDate, endDate, rewardPoints, status, mediaAssetIds } = body
 
     if (!eventId || !title || !description || !startDate || !endDate || rewardPoints === undefined) {
       return NextResponse.json(
@@ -114,13 +122,29 @@ export async function POST(
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         rewardPoints: parseInt(rewardPoints),
-        status: status || 'DRAFT'
+        status: status || 'DRAFT',
+        ...(mediaAssetIds && mediaAssetIds.length > 0 ? {
+          media: {
+            create: mediaAssetIds.map((id: string, index: number) => ({
+              mediaAssetId: id,
+              sortOrder: index,
+            }))
+          }
+        } : {})
       },
       include: {
         event: {
           select: {
             name: true,
             slug: true
+          }
+        },
+        media: {
+          include: {
+            mediaAsset: true
+          },
+          orderBy: {
+            sortOrder: 'asc'
           }
         }
       }

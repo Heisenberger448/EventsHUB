@@ -114,9 +114,25 @@ model Campaign {
   
   event        Event                 @relation(fields: [eventId], references: [id], onDelete: Cascade)
   completions  AmbassadorCampaign[]
+  media        CampaignMedia[]
   
   @@index([eventId])
   @@index([status])
+}
+
+model CampaignMedia {
+  id           String     @id @default(cuid())
+  campaignId   String
+  mediaAssetId String
+  sortOrder    Int        @default(0)
+  createdAt    DateTime   @default(now())
+
+  campaign     Campaign   @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  mediaAsset   MediaAsset @relation(fields: [mediaAssetId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, mediaAssetId])
+  @@index([campaignId])
+  @@index([mediaAssetId])
 }
 
 model AmbassadorCampaign {
@@ -244,6 +260,7 @@ model MediaAsset {
   updatedAt       DateTime     @updatedAt
 
   organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  campaigns       CampaignMedia[]
 
   @@index([organizationId])
   @@index([type])

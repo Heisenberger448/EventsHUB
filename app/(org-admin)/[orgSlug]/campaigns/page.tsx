@@ -26,6 +26,7 @@ import {
   Mic,
   Smile,
   Paperclip,
+  Video,
 } from 'lucide-react'
 
 /* ── iPhone WhatsApp Preview ───────────────────────────────── */
@@ -257,6 +258,7 @@ function ApplicationPreview() {
 }
 
 import { useEventContext } from '@/contexts/EventContext'
+import MediaPicker from '@/components/shared/MediaPicker'
 
 /* ── types ─────────────────────────────────────────────────── */
 interface Campaign {
@@ -362,6 +364,10 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   const [previewTab, setPreviewTab] = useState<'whatsapp' | 'appnotification'>('whatsapp')
   const [formTab, setFormTab] = useState<'algemeen' | 'whatsapp' | 'applicatie' | 'appnotification'>('algemeen')
 
+  /* ── media picker state ────────────────────────── */
+  const [showMediaPicker, setShowMediaPicker] = useState(false)
+  const [selectedMediaAssets, setSelectedMediaAssets] = useState<any[]>([])
+
   /* ── edit modal state ─────────────────────────── */
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null)
@@ -425,6 +431,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
           endDate: formData.endDate ? new Date(formData.endDate).toISOString() : (formData.sendDate ? new Date(formData.sendDate).toISOString() : undefined),
           rewardPoints: formData.rewardPoints ? parseInt(formData.rewardPoints) : 0,
           status: 'DRAFT',
+          mediaAssetIds: selectedMediaAssets.map((m: any) => m.id),
         }),
       })
       if (!res.ok) {
@@ -433,6 +440,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
       }
       setShowCreateModal(false)
       setFormData({ title: '', notificationTitle: '', notificationMessage: '', whatsappMessage: '', description: '', sendDate: '', endDate: '', rewardPoints: '' })
+      setSelectedMediaAssets([])
       fetchCampaigns()
     } catch (err: any) {
       setFormError(err.message)
@@ -811,6 +819,47 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                 />
                 <p className="mt-1 text-xs text-gray-400">Aantal punten dat een ambassadeur verdient bij voltooiing</p>
               </div>
+
+              {/* Media */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Media
+                </label>
+
+                {/* Selected media preview */}
+                {selectedMediaAssets.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {selectedMediaAssets.map((asset: any) => (
+                      <div key={asset.id} className="relative group w-20 h-20 rounded-lg overflow-hidden border border-gray-200">
+                        {asset.type === 'IMAGE' ? (
+                          <img src={asset.fileUrl} alt={asset.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                            <Video className="h-6 w-6 text-gray-400" />
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMediaAssets(prev => prev.filter((m: any) => m.id !== asset.id))}
+                          className="absolute top-1 right-1 p-0.5 bg-white rounded-full shadow opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3 text-gray-500" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setShowMediaPicker(true)}
+                  className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add media
+                </button>
+                <p className="mt-1 text-xs text-gray-400">Voeg afbeeldingen of video&apos;s toe die ambassadeurs kunnen posten</p>
+              </div>
                 </>
               )}
 
@@ -1010,6 +1059,16 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Media Picker Modal ──────────────────────── */}
+      {showMediaPicker && (
+        <MediaPicker
+          orgSlug={params.orgSlug}
+          selectedMedia={selectedMediaAssets}
+          onSelectionChange={setSelectedMediaAssets}
+          onClose={() => setShowMediaPicker(false)}
+        />
       )}
 
       {/* ── Edit Campaign Modal ────────────────────── */}
