@@ -38,6 +38,10 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
     pathname.startsWith(`/${orgSlug}/pre-registration`) ||
     pathname.startsWith(`/${orgSlug}/lists`)
   )
+  const [contentOpen, setContentOpen] = useState(
+    pathname.startsWith(`/${orgSlug}/sign-up-forms`) ||
+    pathname.startsWith(`/${orgSlug}/library`)
+  )
   
   const navigation = [
     {
@@ -66,13 +70,6 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
       href: `/${orgSlug}/rewards`,
       icon: Gift,
       current: pathname === `/${orgSlug}/rewards`,
-      group: 'secondary'
-    },
-    {
-      name: 'Content',
-      href: `/${orgSlug}/content`,
-      icon: FileText,
-      current: pathname === `/${orgSlug}/content`,
       group: 'secondary'
     },
     {
@@ -221,6 +218,60 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
               </Link>
             )
           })}
+        </div>
+
+        {/* Content Dropdown */}
+        <div className="space-y-0.5 mt-0.5">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              setContentOpen(!contentOpen)
+            }}
+            className={`
+              w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer
+              ${pathname.startsWith(`/${orgSlug}/sign-up-forms`) || pathname.startsWith(`/${orgSlug}/library`)
+                ? 'text-gray-900'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }
+            `}
+          >
+            <div className="flex items-center gap-3">
+              <FileText className="h-5 w-5" />
+              <span>Content</span>
+            </div>
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${contentOpen ? '' : '-rotate-90'}`} />
+          </button>
+          
+          {contentOpen && (
+            <div className="space-y-0.5">
+              <Link
+                href={`/${orgSlug}/sign-up-forms`}
+                className={`
+                  flex items-center gap-3 ml-5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors
+                  ${pathname === `/${orgSlug}/sign-up-forms`
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                <span>Sign-up forms</span>
+              </Link>
+              <Link
+                href={`/${orgSlug}/library`}
+                className={`
+                  flex items-center gap-3 ml-5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors
+                  ${pathname === `/${orgSlug}/library`
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                <span>Library</span>
+              </Link>
+            </div>
+          )}
         </div>
       </nav>
 
