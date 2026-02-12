@@ -30,7 +30,7 @@ import {
 } from 'lucide-react'
 
 /* ── iPhone WhatsApp Preview ───────────────────────────────── */
-function WhatsAppPreview({ message, campaignTitle }: { message: string; campaignTitle: string }) {
+function WhatsAppPreview({ message, campaignTitle, mediaAssets }: { message: string; campaignTitle: string; mediaAssets?: any[] }) {
   const now = new Date()
   const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
 
@@ -82,7 +82,34 @@ function WhatsAppPreview({ message, campaignTitle }: { message: string; campaign
 
             {/* Incoming message */}
             <div className="flex justify-start mb-2">
-              <div className="bg-white rounded-lg rounded-tl-none px-3 py-1.5 max-w-[85%] shadow-sm">
+              <div className="bg-white rounded-lg rounded-tl-none max-w-[85%] shadow-sm overflow-hidden">
+                {/* Media attachments */}
+                {mediaAssets && mediaAssets.length > 0 && (
+                  <div className={mediaAssets.length === 1 ? '' : 'grid grid-cols-2 gap-0.5'}>
+                    {mediaAssets.map((asset: any, idx: number) => (
+                      <div key={asset.id || idx} className="bg-gray-200">
+                        {asset.type === 'IMAGE' ? (
+                          <img
+                            src={asset.fileUrl}
+                            alt={asset.name}
+                            className="w-full h-auto object-cover"
+                            style={{ maxHeight: mediaAssets.length === 1 ? '180px' : '90px' }}
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center bg-gray-800" style={{ height: mediaAssets.length === 1 ? '180px' : '90px' }}>
+                            <div className="text-center text-white">
+                              <div className="w-8 h-8 mx-auto rounded-full bg-white/20 flex items-center justify-center mb-1">
+                                <span className="text-xs">▶</span>
+                              </div>
+                              <p className="text-[8px] opacity-70">Video</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="px-3 py-1.5">
                 {message ? (
                   <p className="text-[12px] text-gray-800 whitespace-pre-wrap break-words leading-relaxed">
                     {message}
@@ -94,6 +121,7 @@ function WhatsAppPreview({ message, campaignTitle }: { message: string; campaign
                 )}
                 <div className="flex justify-end mt-0.5">
                   <span className="text-[9px] text-gray-400">{timeStr}</span>
+                </div>
                 </div>
               </div>
             </div>
@@ -359,6 +387,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
   /* ── notification toggles ─────────────────────── */
   const [notifyWhatsApp, setNotifyWhatsApp] = useState(false)
   const [whatsappShop, setWhatsappShop] = useState(false)
+  const [whatsappAddMedia, setWhatsappAddMedia] = useState(false)
   const [notifyApplication, setNotifyApplication] = useState(false)
   const [notifyAppNotification, setNotifyAppNotification] = useState(false)
   const [previewTab, setPreviewTab] = useState<'whatsapp' | 'appnotification'>('whatsapp')
@@ -908,6 +937,49 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
                           <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${whatsappShop ? 'translate-x-5' : 'translate-x-1'}`} />
                         </button>
                       </div>
+                      <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700">Add media</h4>
+                          <p className="text-xs text-gray-400 mt-0.5">Voeg media uit je library toe aan het WhatsApp bericht</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setWhatsappAddMedia(!whatsappAddMedia)}
+                          className={`w-10 h-6 rounded-full relative transition-colors ${whatsappAddMedia ? 'bg-green-500' : 'bg-gray-300'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform ${whatsappAddMedia ? 'translate-x-5' : 'translate-x-1'}`} />
+                        </button>
+                      </div>
+                      {whatsappAddMedia && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Geselecteerde media</label>
+                          {selectedMediaAssets.length > 0 ? (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {selectedMediaAssets.map((asset: any) => (
+                                <div key={asset.id} className="relative group w-16 h-16 rounded-lg overflow-hidden border border-gray-200">
+                                  {asset.type === 'IMAGE' ? (
+                                    <img src={asset.fileUrl} alt={asset.name} className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                                      <Video className="h-5 w-5 text-gray-400" />
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400 mb-2">Nog geen media geselecteerd. Voeg media toe via het Algemeen tab.</p>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setShowMediaPicker(true)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded-lg text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                            Media selecteren
+                          </button>
+                        </div>
+                      )}
                     </>
                   )}
                   {!notifyWhatsApp && (
@@ -1047,7 +1119,7 @@ export default function CampaignsPage({ params }: { params: { orgSlug: string } 
               <div className="w-[340px] shrink-0 bg-gray-50 overflow-y-auto flex flex-col">
                 <div className="flex-1">
                   {formTab === 'whatsapp' ? (
-                    <WhatsAppPreview message={formData.whatsappMessage} campaignTitle={formData.title} />
+                    <WhatsAppPreview message={formData.whatsappMessage} campaignTitle={formData.title} mediaAssets={whatsappAddMedia ? selectedMediaAssets : undefined} />
                   ) : formTab === 'appnotification' ? (
                     <AppNotificationPreview message={formData.notificationMessage} campaignTitle={formData.notificationTitle} />
                   ) : (
