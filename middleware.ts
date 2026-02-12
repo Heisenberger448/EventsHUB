@@ -42,6 +42,6 @@ export const config = {
   matcher: [
     '/admin/:path*',
     // Match org slugs but exclude public routes
-    '/((?!api|login|setup-password|e|_next|static|favicon.ico|$).*)'
+    '/((?!api|login|setup-password|e|pre-register|_next|static|favicon.ico|$).*)'
   ]
 }

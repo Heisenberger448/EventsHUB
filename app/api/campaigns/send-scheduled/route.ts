@@ -2,9 +2,69 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { sendPushNotifications } from '@/lib/apns'
 
+// Auto-create campaigns for pre-registrations whose sales date has passed
+async function processPreRegistrationCampaigns(now: Date) {
+  try {
+    const duePreRegistrations = await prisma.preRegistration.findMany({
+      where: {
+        campaignCreated: false,
+        salesLiveAt: { lte: now },
+      },
+      include: {
+        event: true,
+        organization: true,
+      },
+    })
+
+    for (const preReg of duePreRegistrations) {
+      // Only create campaign if linked to an event
+      if (!preReg.eventId) {
+        // Mark as done so we don't keep checking
+        await prisma.preRegistration.update({
+          where: { id: preReg.id },
+          data: { campaignCreated: true },
+        })
+        console.log(`⚠️ Pre-registration "${preReg.title}" has no event linked, skipping campaign creation`)
+        continue
+      }
+
+      try {
+        await prisma.campaign.create({
+          data: {
+            eventId: preReg.eventId,
+            title: 'Pre-registration sales live',
+            description: `De verkoop voor ${preReg.title} is nu live! Ga snel naar de ticketshop om je tickets te bemachtigen.`,
+            startDate: preReg.salesLiveAt,
+            endDate: new Date(preReg.salesLiveAt.getTime() + 24 * 60 * 60 * 1000), // 24h after
+            rewardPoints: 0,
+            status: 'ACTIVE',
+            sendAppNotification: true,
+            notificationTitle: 'Pre-registration sales live!',
+            notificationMessage: `De verkoop voor ${preReg.title} is nu gestart!`,
+          },
+        })
+
+        await prisma.preRegistration.update({
+          where: { id: preReg.id },
+          data: { campaignCreated: true },
+        })
+
+        console.log(`✅ Auto-created campaign for pre-registration "${preReg.title}"`)
+      } catch (err) {
+        console.error(`❌ Failed to create campaign for pre-registration "${preReg.title}":`, err)
+      }
+    }
+  } catch (error) {
+    console.error('Error processing pre-registration campaigns:', error)
+  }
+}
+
 // Shared logic for sending scheduled campaigns
 async function processScheduledCampaigns() {
   const now = new Date()
+
+  // ── Auto-create campaigns for pre-registrations whose sales date has passed ──
+  await processPreRegistrationCampaigns(now)
 
   // Debug: log all campaigns to understand why none match
   const allCampaigns = await prisma.campaign.findMany({

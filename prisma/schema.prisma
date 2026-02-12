@@ -41,6 +41,7 @@ model Organization {
   users     User[]
   events    Event[]
   rewards   Reward[]
+  preRegistrations PreRegistration[]
   weeztixIntegration  WeeztixIntegration?
   whatsappIntegration WhatsAppIntegration?
 }
@@ -85,6 +86,7 @@ model Event {
   ambassadorEvents AmbassadorEvent[]
   campaigns      Campaign[]
   rewards        Reward[]
+  preRegistrations PreRegistration[]
   
   @@index([organizationId])
   @@index([slug])
@@ -220,4 +222,41 @@ model TwilioConfig {
   authToken       String
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model PreRegistration {
+  id                String   @id @default(cuid())
+  organizationId    String
+  eventId           String?
+  title             String
+  slug              String   @unique
+  description       String?
+  salesLiveAt       DateTime
+  campaignCreated   Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  event             Event?       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  entries           PreRegistrationEntry[]
+
+  @@index([organizationId])
+  @@index([eventId])
+  @@index([slug])
+}
+
+model PreRegistrationEntry {
+  id                  String   @id @default(cuid())
+  preRegistrationId   String
+  firstName           String
+  lastName            String
+  email               String
+  phoneNumber         String
+  countryCode         String   @default("+31")
+  createdAt           DateTime @default(now())
+
+  preRegistration     PreRegistration @relation(fields: [preRegistrationId], references: [id], onDelete: Cascade)
+
+  @@index([preRegistrationId])
+  @@index([email])
 }
