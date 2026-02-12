@@ -35,6 +35,7 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
   const [audienceOpen, setAudienceOpen] = useState(
     pathname.startsWith(`/${orgSlug}/ambassadors`) ||
     pathname.startsWith(`/${orgSlug}/requests`) ||
+    pathname.startsWith(`/${orgSlug}/pre-registration`) ||
     pathname.startsWith(`/${orgSlug}/lists`)
   )
   
@@ -133,7 +134,7 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
             }}
             className={`
               w-full flex items-center justify-between px-3 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer
-              ${pathname.startsWith(`/${orgSlug}/ambassadors`) || pathname.startsWith(`/${orgSlug}/requests`) || pathname.startsWith(`/${orgSlug}/lists`)
+              ${pathname.startsWith(`/${orgSlug}/ambassadors`) || pathname.startsWith(`/${orgSlug}/requests`) || pathname.startsWith(`/${orgSlug}/pre-registration`) || pathname.startsWith(`/${orgSlug}/lists`)
                 ? 'text-gray-900'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
               }
@@ -171,6 +172,18 @@ export default function Sidebar({ orgSlug, organizationName, stats }: SidebarPro
                 `}
               >
                 <span>Ambassadors</span>
+              </Link>
+              <Link
+                href={`/${orgSlug}/pre-registration`}
+                className={`
+                  flex items-center gap-3 ml-5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors
+                  ${pathname === `/${orgSlug}/pre-registration`
+                    ? 'bg-gray-100 text-gray-900'
+                    : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+                  }
+                `}
+              >
+                <span>Pre-registration</span>
               </Link>
               <Link
                 href={`/${orgSlug}/lists`}
