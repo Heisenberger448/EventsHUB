@@ -77,12 +77,34 @@ export async function POST(req: NextRequest) {
         slug,
         description: description || null,
         salesLiveAt: new Date(salesLiveAt),
+        campaignCreated: !!eventId,
       },
       include: {
         event: { select: { id: true, name: true } },
         _count: { select: { entries: true } },
       },
     })
+
+    // Immediately create a scheduled campaign if linked to an event
+    if (eventId) {
+      const salesDate = new Date(salesLiveAt)
+      await prisma.campaign.create({
+        data: {
+          eventId,
+          title: 'Pre-registration sales live',
+          description: `De verkoop voor ${title} is nu live! Ga snel naar de ticketshop om je tickets te bemachtigen.`,
+          startDate: salesDate,
+          endDate: new Date(salesDate.getTime() + 24 * 60 * 60 * 1000),
+          rewardPoints: 0,
+          status: 'ACTIVE',
+          sendAppNotification: true,
+          sendWhatsApp: true,
+          notificationTitle: 'Pre-registration sales live!',
+          notificationMessage: `De verkoop voor ${title} is nu gestart!`,
+          whatsappMessage: `🎉 De verkoop voor ${title} is nu live! Ga snel naar de ticketshop om je tickets te bemachtigen.`,
+        },
+      })
+    }
 
     return NextResponse.json(preRegistration, { status: 201 })
   } catch (error) {
