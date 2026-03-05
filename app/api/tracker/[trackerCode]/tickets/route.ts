@@ -94,6 +94,30 @@ export async function GET(
       .filter(Boolean)
       .join(' ') || 'Ambassador'
 
+    // Fetch payment methods for this event
+    let paymentMethods: any[] = []
+    try {
+      const pmRes = await fetch(
+        `${YOURTICKET_API_BASE}/Events(${event.ticketShopId})/PaymentMethods?$expand=Issuers`,
+        { headers }
+      )
+      if (pmRes.ok) {
+        const pmData = await pmRes.json()
+        paymentMethods = (pmData.value ?? pmData ?? []).map((pm: any) => ({
+          name: pm.Name,
+          type: pm.Type,
+          requiresIssuer: pm.RequiresIssuerSelection || false,
+          issuers: (pm.Issuers ?? []).map((iss: any) => ({
+            id: iss.Id,
+            name: iss.Name,
+            country: iss.Country,
+          })),
+        }))
+      }
+    } catch (pmErr) {
+      console.error('[tracker/tickets] Failed to fetch payment methods:', pmErr)
+    }
+
     return NextResponse.json({
       event: {
         id: event.id,
@@ -105,6 +129,7 @@ export async function GET(
       },
       ambassador: ambassadorName,
       tickets,
+      paymentMethods,
     })
   } catch (error) {
     console.error('[tracker/tickets] Error:', error)

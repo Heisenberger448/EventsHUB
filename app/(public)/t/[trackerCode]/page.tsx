@@ -19,9 +19,17 @@ interface EventInfo {
   organization: string
 }
 
-interface TicketSelection {
-  ticketId: number
-  quantity: number
+interface Issuer {
+  id: string
+  name: string
+  country: string
+}
+
+interface PaymentMethod {
+  name: string
+  type: string
+  requiresIssuer: boolean
+  issuers: Issuer[]
 }
 
 export default function TrackerPage({ params }: { params: { trackerCode: string } }) {
@@ -29,11 +37,14 @@ export default function TrackerPage({ params }: { params: { trackerCode: string 
   const [error, setError] = useState('')
   const [event, setEvent] = useState<EventInfo | null>(null)
   const [ambassador, setAmbassador] = useState('')
-  const [tickets, setTickets] = useState<Ticket[]>([])
+  const [tickets, setTickets] = useState<Ticket[]>([])  
   const [selections, setSelections] = useState<Record<number, number>>({})
   const [email, setEmail] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([])
+  const [selectedPaymentType, setSelectedPaymentType] = useState('')
+  const [selectedIssuerId, setSelectedIssuerId] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -52,6 +63,10 @@ export default function TrackerPage({ params }: { params: { trackerCode: string 
       setEvent(data.event)
       setAmbassador(data.ambassador)
       setTickets(data.tickets)
+      if (data.paymentMethods?.length) {
+        setPaymentMethods(data.paymentMethods)
+        setSelectedPaymentType(data.paymentMethods[0].type)
+      }
     } catch (err) {
       setError('Er ging iets mis bij het laden.')
     } finally {
@@ -99,7 +114,14 @@ export default function TrackerPage({ params }: { params: { trackerCode: string 
       const res = await fetch(`/api/tracker/${params.trackerCode}/purchase`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, firstName, lastName, items }),
+        body: JSON.stringify({
+          email,
+          firstName,
+          lastName,
+          items,
+          paymentType: selectedPaymentType || undefined,
+          issuerId: selectedIssuerId || undefined,
+        }),
       })
 
       const data = await res.json()
@@ -305,6 +327,58 @@ export default function TrackerPage({ params }: { params: { trackerCode: string 
                 </div>
               </div>
             </div>
+
+            {/* Payment Method Selection */}
+            {paymentMethods.length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 mb-3">Betaalmethode</h2>
+                <div className="grid grid-cols-2 gap-2">
+                  {paymentMethods.map((pm) => (
+                    <button
+                      key={pm.type}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPaymentType(pm.type)
+                        setSelectedIssuerId('')
+                      }}
+                      className={`
+                        flex items-center justify-center p-3 rounded-lg border-2 text-sm font-medium transition-all
+                        ${selectedPaymentType === pm.type
+                          ? 'border-orange-500 bg-orange-50 text-orange-700'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                        }
+                      `}
+                    >
+                      {pm.name}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Issuer selection (e.g. bank for iDEAL) */}
+                {paymentMethods.find((pm) => pm.type === selectedPaymentType)?.requiresIssuer && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Selecteer je bank
+                    </label>
+                    <select
+                      value={selectedIssuerId}
+                      onChange={(e) => setSelectedIssuerId(e.target.value)}
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent bg-white"
+                    >
+                      <option value="">Kies een bank...</option>
+                      {paymentMethods
+                        .find((pm) => pm.type === selectedPaymentType)
+                        ?.issuers.map((iss) => (
+                          <option key={iss.id} value={iss.id}>
+                            {iss.name}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Terms */}
             <div className="flex items-start gap-2">

@@ -27,7 +27,7 @@ export async function POST(
   try {
     const { trackerCode } = params
     const body = await req.json()
-    const { email, firstName, lastName, items } = body
+    const { email, firstName, lastName, items, paymentType: reqPaymentType, issuerId: reqIssuerId } = body
 
     if (!email || !items || !Array.isArray(items) || items.length === 0) {
       return NextResponse.json(
@@ -144,35 +144,21 @@ export async function POST(
       },
     })
 
-    // Step 2: Fetch available payment methods for this event
-    let paymentType = 'ideal' // default fallback
-    try {
-      const pmRes = await fetch(
-        `${YOURTICKET_API_BASE}/Events(${event.ticketShopId})/PaymentMethods`,
-        { headers }
-      )
-      if (pmRes.ok) {
-        const pmData = await pmRes.json()
-        const methods = pmData.value ?? pmData ?? []
-        console.log('[tracker/purchase] Available payment methods:', methods.map((m: any) => m.Type))
-        if (methods.length > 0) {
-          paymentType = methods[0].Type
-        }
-      }
-    } catch (pmErr) {
-      console.error('[tracker/purchase] Failed to fetch payment methods:', pmErr)
-    }
+    // Step 2: Determine payment type (from client selection or fallback)
+    const paymentType = reqPaymentType || 'ideal'
 
     // Step 3: Start payment via YTP.StartPayment to get PaymentUrl
-    console.log('[tracker/purchase] Starting payment with type:', paymentType)
+    const startPaymentBody: any = { paymentType }
+    if (reqIssuerId) {
+      startPaymentBody.issuerId = reqIssuerId
+    }
+    console.log('[tracker/purchase] Starting payment:', startPaymentBody)
     const startPaymentRes = await fetch(
       `${YOURTICKET_API_BASE}/Purchases(${ytpPurchaseId})/YTP.StartPayment`,
       {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          paymentType,
-        }),
+        body: JSON.stringify(startPaymentBody),
       }
     )
 
