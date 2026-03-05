@@ -15,6 +15,11 @@ interface WeeztixShop {
   name: string
 }
 
+interface YourticketChannel {
+  uuid: string
+  name: string
+}
+
 interface EventData {
   id?: string
   name: string
@@ -63,14 +68,19 @@ export default function CreateEventModal({
   const [providers, setProviders] = useState<TicketProvider[]>([])
   const [loadingProviders, setLoadingProviders] = useState(false)
   const [shops, setShops] = useState<WeeztixShop[]>([])
+  const [ytChannels, setYtChannels] = useState<YourticketChannel[]>([])
   const [loadingShops, setLoadingShops] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
   const fetchProviders = useCallback(async () => {
     setLoadingProviders(true)
     try {
-      const weeztixRes = await fetch('/api/integrations/weeztix')
+      const [weeztixRes, yourticketRes] = await Promise.all([
+        fetch('/api/integrations/weeztix'),
+        fetch('/api/integrations/yourticket'),
+      ])
       const weeztixData = await weeztixRes.json()
+      const yourticketData = await yourticketRes.json()
 
       const available: TicketProvider[] = []
       if (weeztixData.connected) {
@@ -79,6 +89,14 @@ export default function CreateEventModal({
           name: 'Weeztix',
           connected: true,
           companyName: weeztixData.companyName,
+        })
+      }
+      if (yourticketData.connected) {
+        available.push({
+          id: 'yourticket',
+          name: 'Yourticket',
+          connected: true,
+          companyName: yourticketData.accountName,
         })
       }
       setProviders(available)
@@ -104,22 +122,48 @@ export default function CreateEventModal({
     }
   }
 
+  const fetchYourticketChannels = async (eventUuid?: string) => {
+    if (!eventUuid && !formData.ticketShopId) return
+    setLoadingShops(true)
+    try {
+      const uuid = eventUuid || formData.ticketShopId
+      const res = await fetch(`/api/integrations/yourticket/channels?event_uuid=${uuid}`)
+      if (res.ok) {
+        const data = await res.json()
+        setYtChannels(data)
+      }
+    } catch {
+      console.error('Error fetching Yourticket channels')
+    } finally {
+      setLoadingShops(false)
+    }
+  }
+
   useEffect(() => {
     fetchProviders()
     if (editingEvent?.ticketProvider === 'weeztix') {
       fetchShops()
+    }
+    if (editingEvent?.ticketProvider === 'yourticket') {
+      // For Yourticket, channels are per-event so no auto-fetch here
     }
   }, [fetchProviders, editingEvent])
 
   const handleProviderChange = (providerId: string) => {
     setFormData({ ...formData, ticketProvider: providerId, ticketShopId: '', ticketShopName: '' })
     setShops([])
+    setYtChannels([])
     if (providerId === 'weeztix') fetchShops()
   }
 
-  const handleShopChange = (shopGuid: string) => {
-    const shop = shops.find((s) => s.guid === shopGuid)
-    setFormData({ ...formData, ticketShopId: shopGuid, ticketShopName: shop?.name || '' })
+  const handleShopChange = (shopId: string) => {
+    if (formData.ticketProvider === 'yourticket') {
+      const channel = ytChannels.find((c) => c.uuid === shopId)
+      setFormData({ ...formData, ticketShopId: shopId, ticketShopName: channel?.name || '' })
+    } else {
+      const shop = shops.find((s) => s.guid === shopId)
+      setFormData({ ...formData, ticketShopId: shopId, ticketShopName: shop?.name || '' })
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -298,10 +342,10 @@ export default function CreateEventModal({
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Ticketshops laden...
               </div>
-            ) : shops.length === 0 ? (
+            ) : (formData.ticketProvider === 'yourticket' ? ytChannels.length === 0 : shops.length === 0) ? (
               <div className="px-3 py-2.5 border border-dashed border-gray-300 rounded-lg bg-gray-50">
                 <p className="text-sm text-gray-500">
-                  Geen ticketshops gevonden in {formData.ticketProvider === 'weeztix' ? 'Weeztix' : formData.ticketProvider}.
+                  Geen ticketshops gevonden in {formData.ticketProvider === 'weeztix' ? 'Weeztix' : formData.ticketProvider === 'yourticket' ? 'Yourticket' : formData.ticketProvider}.
                 </p>
               </div>
             ) : (
@@ -312,9 +356,14 @@ export default function CreateEventModal({
                   className="w-full appearance-none px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white pr-10"
                 >
                   <option value="">Selecteer een ticketshop</option>
-                  {shops.map((shop) => (
-                    <option key={shop.guid} value={shop.guid}>{shop.name}</option>
-                  ))}
+                  {formData.ticketProvider === 'yourticket'
+                    ? ytChannels.map((channel) => (
+                        <option key={channel.uuid} value={channel.uuid}>{channel.name}</option>
+                      ))
+                    : shops.map((shop) => (
+                        <option key={shop.guid} value={shop.guid}>{shop.name}</option>
+                      ))
+                  }
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               </div>

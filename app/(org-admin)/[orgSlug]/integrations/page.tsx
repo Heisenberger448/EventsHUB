@@ -13,26 +13,46 @@ interface WeeztixStatus {
   clientId?: string | null
 }
 
+interface YourticketStatus {
+  connected: boolean
+  tokenValid?: boolean
+  accountName?: string | null
+  email?: string | null
+  connectedAt?: string | null
+}
+
 export default function IntegrationsPage() {
   const searchParams = useSearchParams()
   const [weeztixStatus, setWeeztixStatus] = useState<WeeztixStatus | null>(null)
+  const [yourticketStatus, setYourticketStatus] = useState<YourticketStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [showConnectModal, setShowConnectModal] = useState(false)
+  const [showYourticketModal, setShowYourticketModal] = useState(false)
   const [clientId, setClientId] = useState('')
   const [clientSecret, setClientSecret] = useState('')
   const [showSecret, setShowSecret] = useState(false)
   const [connecting, setConnecting] = useState(false)
   const [disconnecting, setDisconnecting] = useState(false)
+  const [ytEmail, setYtEmail] = useState('')
+  const [ytPassword, setYtPassword] = useState('')
+  const [showYtPassword, setShowYtPassword] = useState(false)
+  const [ytConnecting, setYtConnecting] = useState(false)
+  const [ytDisconnecting, setYtDisconnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch('/api/integrations/weeztix')
-      const data = await res.json()
-      setWeeztixStatus(data)
+      const [wRes, yRes] = await Promise.all([
+        fetch('/api/integrations/weeztix'),
+        fetch('/api/integrations/yourticket'),
+      ])
+      const wData = await wRes.json()
+      const yData = await yRes.json()
+      setWeeztixStatus(wData)
+      setYourticketStatus(yData)
     } catch {
-      console.error('Failed to fetch Weeztix status')
+      console.error('Failed to fetch integration status')
     } finally {
       setLoading(false)
     }
@@ -107,6 +127,66 @@ export default function IntegrationsPage() {
       setError('Kan niet verbinden met de server')
     } finally {
       setDisconnecting(false)
+    }
+  }
+
+  const handleYourticketConnect = async () => {
+    if (!ytEmail.trim() || !ytPassword.trim()) {
+      setError('Vul zowel e-mail als wachtwoord in')
+      return
+    }
+
+    setYtConnecting(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/integrations/yourticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: ytEmail.trim(), password: ytPassword.trim() }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.error || 'Er ging iets mis')
+        return
+      }
+
+      setYourticketStatus({ connected: true, tokenValid: true, accountName: data.accountName, email: ytEmail.trim() })
+      setShowYourticketModal(false)
+      setYtEmail('')
+      setYtPassword('')
+      setSuccessMessage('Yourticket is succesvol gekoppeld!')
+      setTimeout(() => setSuccessMessage(null), 5000)
+    } catch {
+      setError('Kan niet verbinden met de server')
+    } finally {
+      setYtConnecting(false)
+    }
+  }
+
+  const handleYourticketDisconnect = async () => {
+    if (!confirm('Weet je zeker dat je Yourticket wilt ontkoppelen?')) return
+
+    setYtDisconnecting(true)
+    setError(null)
+
+    try {
+      const res = await fetch('/api/integrations/yourticket', { method: 'DELETE' })
+
+      if (!res.ok) {
+        setError('Ontkoppelen mislukt')
+        return
+      }
+
+      setYourticketStatus({ connected: false })
+      setSuccessMessage('Yourticket is ontkoppeld')
+      setTimeout(() => setSuccessMessage(null), 5000)
+    } catch {
+      setError('Kan niet verbinden met de server')
+    } finally {
+      setYtDisconnecting(false)
     }
   }
 
@@ -211,33 +291,79 @@ export default function IntegrationsPage() {
             </div>
           </div>
 
-          {/* ───────── Your ticket provider ───────── */}
-          <div className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+          {/* ───────── Yourticket (CM.com) Integration (LIVE) ───────── */}
+          <div className={`bg-white rounded-lg border p-6 hover:shadow-md transition-shadow ${
+            yourticketStatus?.connected ? 'border-green-300 ring-1 ring-green-100' : 'border-gray-200'
+          }`}>
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-200">
-                <svg className="w-8 h-8" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M50 10 L90 75 L10 75 Z" fill="#3EADD4"/>
-                </svg>
+              <div className="w-12 h-12 bg-[#3EADD4] rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+                <span className="text-white font-bold text-lg">YT</span>
               </div>
+
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">Your ticket provider</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">Yourticket</h3>
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+                  ) : yourticketStatus?.connected ? (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <CheckCircle className="h-3 w-3" /> Verbonden
+                    </span>
+                  ) : null}
                 </div>
                 <p className="text-xs text-gray-500 mb-3">Built by SharedCrowd</p>
                 <p className="text-sm text-gray-600 mb-4 line-clamp-3">
-                  Importeer ticket orders en bezoekersdata van je ticketprovider in SharedCrowd.
+                  Importeer Yourticket (CM.com) ticket orders en bezoekersdata in SharedCrowd om ticketverkoop bij te houden en gepersonaliseerde campagnes te starten.
                 </p>
+
+                {yourticketStatus?.connected && yourticketStatus.accountName && (
+                  <p className="text-xs text-gray-500 mb-3">
+                    Account: <span className="font-medium text-gray-700">{yourticketStatus.accountName}</span>
+                  </p>
+                )}
+
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
                     Tickets
                   </span>
+                  {yourticketStatus?.connected && !yourticketStatus.tokenValid && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-yellow-100 text-yellow-800">
+                      Token verlopen
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
-            <div className="mt-6 pt-4 border-t border-gray-200">
-              <button className="w-full px-4 py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100 transition-colors cursor-default">
-                Coming Soon
-              </button>
+
+            <div className="mt-6 pt-4 border-t border-gray-200 space-y-2">
+              {loading ? (
+                <div className="h-9 bg-gray-100 rounded-md animate-pulse" />
+              ) : yourticketStatus?.connected ? (
+                <div className="flex gap-2">
+                  <a
+                    href="https://yourticket.cm.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-50 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100 transition-colors"
+                  >
+                    Dashboard <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                  <button
+                    onClick={handleYourticketDisconnect}
+                    disabled={ytDisconnecting}
+                    className="flex-1 px-4 py-2 bg-red-50 text-red-700 text-sm font-medium rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
+                  >
+                    {ytDisconnecting ? 'Bezig...' : 'Ontkoppelen'}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowYourticketModal(true)}
+                  className="w-full px-4 py-2 bg-[#3EADD4] text-white text-sm font-medium rounded-md hover:bg-[#2E9DC4] transition-colors"
+                >
+                  Koppelen
+                </button>
+              )}
             </div>
           </div>
 
@@ -474,6 +600,100 @@ export default function IntegrationsPage() {
                   </>
                 ) : (
                   'Verbinden met Weeztix'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─────────── Yourticket Connect Modal ─────────── */}
+      {showYourticketModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-[#3EADD4] rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">YT</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Yourticket koppelen</h2>
+                <p className="text-xs text-gray-500">CM.com Ticketing API</p>
+              </div>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                Gebruik de inloggegevens die je van CM.com hebt ontvangen voor de Partner API. Neem contact op met je account manager bij CM.com als je nog geen toegang hebt.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  E-mailadres
+                </label>
+                <input
+                  type="email"
+                  value={ytEmail}
+                  onChange={(e) => setYtEmail(e.target.value)}
+                  placeholder="john.doe@example.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Wachtwoord
+                </label>
+                <div className="relative">
+                  <input
+                    type={showYtPassword ? 'text' : 'password'}
+                    value={ytPassword}
+                    onChange={(e) => setYtPassword(e.target.value)}
+                    placeholder="••••••••••••••••"
+                    className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowYtPassword(!showYtPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showYtPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {error && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => {
+                  setShowYourticketModal(false)
+                  setYtEmail('')
+                  setYtPassword('')
+                  setError(null)
+                }}
+                className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-200 transition-colors"
+              >
+                Annuleren
+              </button>
+              <button
+                onClick={handleYourticketConnect}
+                disabled={ytConnecting || !ytEmail.trim() || !ytPassword.trim()}
+                className="flex-1 px-4 py-2 bg-[#3EADD4] text-white text-sm font-medium rounded-md hover:bg-[#2E9DC4] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {ytConnecting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Verbinden...
+                  </>
+                ) : (
+                  'Verbinden met Yourticket'
                 )}
               </button>
             </div>
