@@ -1,128 +1,77 @@
 import { prisma } from '@/lib/prisma'
 
-const CM_TICKETING_BASE = 'https://api.ticketing.cm.com/partnerapi/v1.0'
+/**
+ * YTP Ticketing API — OData REST API
+ * Docs: https://ytpstorage1.blob.core.windows.net/media/YTP%20Ticketing%20API%20Specifications.pdf
+ *
+ * Authentication: API key sent as plain text in the Authorization header with every request.
+ * Base URL: https://api.yourticketprovider.nl
+ */
+export const YOURTICKET_API_BASE = 'https://api.yourticketprovider.nl'
 
 /**
- * Sign in to the CM.com Ticketing API and obtain a bearer token.
- * Returns the access token or null if sign-in failed.
+ * Build authorization headers for the YTP Ticketing API.
  */
-export async function signInYourticket(
-  email: string,
-  password: string
-): Promise<{ token: string; expiresAt: Date } | null> {
-  try {
-    const res = await fetch(`${CM_TICKETING_BASE}/auth/signin`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    })
-
-    if (!res.ok) {
-      const errText = await res.text()
-      console.error('Yourticket sign-in failed:', res.status, errText)
-      return null
-    }
-
-    const data = await res.json()
-
-    // The API returns a bearer token — typically valid for 24 hours
-    const token = data.token || data.access_token || data.accessToken
-    if (!token) {
-      console.error('Yourticket sign-in: no token in response', data)
-      return null
-    }
-
-    // Default expiry to 23 hours to be safe (re-auth before actual expiry)
-    const expiresIn = data.expires_in || data.expiresIn || 82800 // 23h in seconds
-    const expiresAt = new Date(Date.now() + expiresIn * 1000)
-
-    return { token, expiresAt }
-  } catch (error) {
-    console.error('Error signing in to Yourticket:', error)
-    return null
-  }
-}
-
-/**
- * Refresh the Yourticket access token by re-authenticating.
- * CM.com Ticketing uses email/password auth, so we just sign in again.
- */
-export async function refreshYourticketToken(
-  organizationId: string
-): Promise<string | null> {
-  const integration = await prisma.yourticketIntegration.findUnique({
-    where: { organizationId },
-  })
-
-  if (!integration?.email || !integration.password) {
-    return null
-  }
-
-  const result = await signInYourticket(integration.email, integration.password)
-  if (!result) {
-    console.error('Yourticket token refresh failed, credentials might be invalid')
-    return null
-  }
-
-  await prisma.yourticketIntegration.update({
-    where: { organizationId },
-    data: {
-      accessToken: result.token,
-      accessTokenExpiresAt: result.expiresAt,
-    },
-  })
-
-  return result.token
-}
-
-/**
- * Get a valid Yourticket access token for the given organization.
- * Automatically refreshes (re-authenticates) if the current token is expired.
- */
-export async function getYourticketToken(
-  organizationId: string
-): Promise<string | null> {
-  const integration = await prisma.yourticketIntegration.findUnique({
-    where: { organizationId },
-  })
-
-  if (!integration?.accessToken) {
-    // No token at all, try to sign in
-    if (integration?.email && integration.password) {
-      return refreshYourticketToken(organizationId)
-    }
-    return null
-  }
-
-  // Check if access token is still valid (with 5-min buffer)
-  const isExpired =
-    integration.accessTokenExpiresAt &&
-    new Date(integration.accessTokenExpiresAt).getTime() - 5 * 60 * 1000 <
-      Date.now()
-
-  if (isExpired) {
-    const newToken = await refreshYourticketToken(organizationId)
-    return newToken
-  }
-
-  return integration.accessToken
-}
-
-/**
- * Build authorization headers for the CM.com Ticketing API.
- */
-export function yourticketHeaders(token: string): Record<string, string> {
+export function yourticketHeaders(apiKey: string): Record<string, string> {
   return {
-    Authorization: `Bearer ${token}`,
+    Authorization: apiKey,
     Accept: 'application/json',
     'Content-Type': 'application/json',
   }
 }
 
 /**
- * CM.com Ticketing API base URL
+ * Validate an API key by calling GET /Organisers.
+ * Returns the first organiser or null if the key is invalid.
  */
-export const YOURTICKET_API_BASE = CM_TICKETING_BASE
+export async function validateApiKey(
+  apiKey: string
+): Promise<{ id: number; firstName: string; lastName: string; email: string } | null> {
+  try {
+    const res = await fetch(`${YOURTICKET_API_BASE}/Organisers`, {
+      headers: yourticketHeaders(apiKey),
+    })
+
+    if (!res.ok) {
+      const errText = await res.text()
+      console.error('Yourticket API key validation failed:', res.status, errText)
+      return null
+    }
+
+    const data = await res.json()
+    const organisers = data.value ?? data ?? []
+
+    if (!Array.isArray(organisers) || organisers.length === 0) {
+      console.error('Yourticket: no organisers found for this API key')
+      return null
+    }
+
+    const org = organisers[0]
+    return {
+      id: org.Id,
+      firstName: org.FirstName || '',
+      lastName: org.LastName || '',
+      email: org.Email || '',
+    }
+  } catch (error) {
+    console.error('Error validating Yourticket API key:', error)
+    return null
+  }
+}
+
+/**
+ * Get the API key for a given organization from the database.
+ */
+export async function getYourticketApiKey(
+  organizationId: string
+): Promise<{ apiKey: string; organiserId: number | null } | null> {
+  const integration = await prisma.yourticketIntegration.findUnique({
+    where: { organizationId },
+  })
+
+  if (!integration?.apiKey) {
+    return null
+  }
+
+  return { apiKey: integration.apiKey, organiserId: integration.organiserId }
+}

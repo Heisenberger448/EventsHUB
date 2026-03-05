@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { signInYourticket } from '@/lib/yourticket'
+import { validateApiKey } from '@/lib/yourticket'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,10 +19,9 @@ export async function GET() {
       where: { organizationId: session.user.organizationId },
       select: {
         id: true,
-        email: true,
-        accountName: true,
+        organiserId: true,
+        organiserName: true,
         connectedAt: true,
-        accessTokenExpiresAt: true,
         createdAt: true,
       },
     })
@@ -31,15 +30,10 @@ export async function GET() {
       return NextResponse.json({ connected: false })
     }
 
-    const isTokenValid =
-      integration.accessTokenExpiresAt &&
-      new Date(integration.accessTokenExpiresAt) > new Date()
-
     return NextResponse.json({
       connected: !!integration.connectedAt,
-      tokenValid: isTokenValid,
-      accountName: integration.accountName,
-      email: integration.email,
+      organiserName: integration.organiserName,
+      organiserId: integration.organiserId,
       connectedAt: integration.connectedAt,
     })
   } catch (error) {
@@ -48,7 +42,7 @@ export async function GET() {
   }
 }
 
-// POST — save credentials, sign in and connect
+// POST — save API key, validate and connect
 export async function POST(req: NextRequest) {
   try {
     const session = await getServerSession(authOptions)
@@ -56,43 +50,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const { email, password } = await req.json()
+    const { apiKey } = await req.json()
 
-    if (!email || !password) {
+    if (!apiKey || typeof apiKey !== 'string' || !apiKey.trim()) {
       return NextResponse.json(
-        { error: 'E-mail en wachtwoord zijn verplicht' },
+        { error: 'API key is verplicht' },
         { status: 400 }
       )
     }
 
-    // Attempt to sign in with the CM.com Ticketing API
-    const result = await signInYourticket(email, password)
-    if (!result) {
+    // Validate the API key by fetching organisers
+    const organiser = await validateApiKey(apiKey.trim())
+    if (!organiser) {
       return NextResponse.json(
-        { error: 'Inloggen mislukt. Controleer je e-mail en wachtwoord.' },
+        { error: 'Ongeldige API key. Controleer je sleutel en probeer opnieuw.' },
         { status: 401 }
       )
     }
 
-    // Upsert the integration record with credentials and token
+    const organiserName = [organiser.firstName, organiser.lastName].filter(Boolean).join(' ') || organiser.email
+
+    // Upsert the integration record
     const now = new Date()
     await prisma.yourticketIntegration.upsert({
       where: { organizationId: session.user.organizationId },
       create: {
         organizationId: session.user.organizationId,
-        email,
-        password,
-        accessToken: result.token,
-        accessTokenExpiresAt: result.expiresAt,
-        accountName: email.split('@')[0],
+        apiKey: apiKey.trim(),
+        organiserId: organiser.id,
+        organiserName,
         connectedAt: now,
       },
       update: {
-        email,
-        password,
-        accessToken: result.token,
-        accessTokenExpiresAt: result.expiresAt,
-        accountName: email.split('@')[0],
+        apiKey: apiKey.trim(),
+        organiserId: organiser.id,
+        organiserName,
         connectedAt: now,
       },
     })
@@ -100,10 +92,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       connected: true,
-      accountName: email.split('@')[0],
+      organiserName,
+      organiserId: organiser.id,
     })
   } catch (error) {
-    console.error('Error saving Yourticket credentials:', error)
+    console.error('Error saving Yourticket API key:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

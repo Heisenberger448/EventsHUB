@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
-import { getYourticketToken, yourticketHeaders, YOURTICKET_API_BASE } from '@/lib/yourticket'
+import { getYourticketApiKey, yourticketHeaders, YOURTICKET_API_BASE } from '@/lib/yourticket'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-// GET — fetch all events from CM.com Ticketing for the current organization
+// GET — fetch all events from YTP Ticketing API for the current organization
+// Uses: GET /Organisers(<id>)/Events  (OData)
 export async function GET() {
   try {
     const session = await getServerSession(authOptions)
@@ -14,62 +15,63 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
     }
 
-    const token = await getYourticketToken(session.user.organizationId)
-    if (!token) {
+    const creds = await getYourticketApiKey(session.user.organizationId)
+    if (!creds) {
       return NextResponse.json(
-        { error: 'Yourticket is niet gekoppeld of het token is verlopen' },
+        { error: 'Yourticket is niet gekoppeld' },
         { status: 400 }
       )
     }
 
-    const headers = yourticketHeaders(token)
+    const headers = yourticketHeaders(creds.apiKey)
 
-    // Fetch events with pagination — get up to 100 events
-    const allEvents: any[] = []
-    let skip = 0
-    const take = 20
-    let hasMore = true
+    // If we have an organiserId, fetch events for that specific organiser
+    // Otherwise fall back to fetching all organisers first
+    let organiserId = creds.organiserId
 
-    while (hasMore) {
-      const res = await fetch(
-        `${YOURTICKET_API_BASE}/events?type=ALL`,
-        {
-          headers: {
-            ...headers,
-            'X-TF-PAGINATION-SKIP': String(skip),
-          },
-        }
-      )
-
-      if (!res.ok) {
-        const errText = await res.text()
-        console.error('Yourticket events fetch failed:', res.status, errText)
+    if (!organiserId) {
+      const orgRes = await fetch(`${YOURTICKET_API_BASE}/Organisers`, { headers })
+      if (!orgRes.ok) {
         return NextResponse.json(
-          { error: 'Kon events niet ophalen van Yourticket' },
+          { error: 'Kon organisers niet ophalen van Yourticket' },
           { status: 502 }
         )
       }
-
-      const data = await res.json()
-      const events = Array.isArray(data) ? data : data.data ?? data.events ?? []
-      allEvents.push(...events)
-
-      // Check pagination headers
-      const total = parseInt(res.headers.get('x-tf-pagination-total') || '0', 10)
-      skip += take
-      hasMore = skip < total && events.length > 0
-
-      // Safety: max 200 events
-      if (allEvents.length >= 200) break
+      const orgData = await orgRes.json()
+      const organisers = orgData.value ?? orgData ?? []
+      if (organisers.length === 0) {
+        return NextResponse.json([])
+      }
+      organiserId = organisers[0].Id
     }
 
-    const mapped = allEvents.map((event: any) => ({
-      uuid: event.uuid || event.id || event.eventUuid,
-      name: event.name || event.title,
-      description: event.description || null,
-      start: event.startDate || event.start || event.dateStart || null,
-      end: event.endDate || event.end || event.dateEnd || null,
-      location: event.venue?.name || event.location?.name || event.locationName || null,
+    // Fetch events for this organiser
+    const res = await fetch(
+      `${YOURTICKET_API_BASE}/Organisers(${organiserId})/Events`,
+      { headers }
+    )
+
+    if (!res.ok) {
+      const errText = await res.text()
+      console.error('Yourticket events fetch failed:', res.status, errText)
+      return NextResponse.json(
+        { error: 'Kon events niet ophalen van Yourticket' },
+        { status: 502 }
+      )
+    }
+
+    const data = await res.json()
+    const events = data.value ?? data ?? []
+
+    const mapped = events.map((event: any) => ({
+      id: event.Id,
+      name: event.Name,
+      description: event.Description || null,
+      start: event.StartDateTime || null,
+      end: event.EndDateTime || null,
+      location: event.LocationName || null,
+      address: event.Address || null,
+      live: event.Live ?? false,
     }))
 
     return NextResponse.json(mapped)

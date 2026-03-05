@@ -27,17 +27,13 @@ interface WeeztixShop {
 
 /* ── Yourticket event type ────────────────────────────────── */
 interface YourticketEvent {
-  uuid: string
+  id: number
   name: string
   description: string | null
   start: string | null
   end: string | null
   location: string | null
-}
-
-interface YourticketChannel {
-  uuid: string
-  name: string
+  live: boolean
 }
 
 /* ── Ticket Provider definitions ──────────────────────────── */
@@ -87,7 +83,7 @@ const TICKET_PROVIDERS = [
 /* ── Event Choice Modal (Connect Provider vs Add Manually) ── */
 function EventChoiceModal() {
   const { showEventChoiceModal, setShowEventChoiceModal, setShowCreateModal, refreshEvents, setSelectedEvent, weeztixReturnPending, setWeeztixReturnPending } = useEventContext()
-  const [step, setStep] = useState<'choice' | 'providers' | 'weeztix' | 'weeztix-events' | 'weeztix-shops' | 'yourticket' | 'yourticket-events' | 'yourticket-channels'>('choice')
+  const [step, setStep] = useState<'choice' | 'providers' | 'weeztix' | 'weeztix-events' | 'weeztix-shops' | 'yourticket' | 'yourticket-events'>('choice')
 
   /* Weeztix connect form state */
   const [clientId, setClientId] = useState('')
@@ -114,9 +110,8 @@ function EventChoiceModal() {
   const [creatingShop, setCreatingShop] = useState(false)
 
   /* Yourticket connect form state */
-  const [ytEmail, setYtEmail] = useState('')
-  const [ytPassword, setYtPassword] = useState('')
-  const [showYtPassword, setShowYtPassword] = useState(false)
+  const [ytApiKey, setYtApiKey] = useState('')
+  const [showYtApiKey, setShowYtApiKey] = useState(false)
   const [ytConnecting, setYtConnecting] = useState(false)
   const [ytConnectError, setYtConnectError] = useState('')
 
@@ -127,12 +122,6 @@ function EventChoiceModal() {
   const [ytEventSearch, setYtEventSearch] = useState('')
   const [selectedYourticketEvent, setSelectedYourticketEvent] = useState<YourticketEvent | null>(null)
   const [ytImporting, setYtImporting] = useState(false)
-
-  /* Yourticket channels state */
-  const [yourticketChannels, setYourticketChannels] = useState<YourticketChannel[]>([])
-  const [ytLoadingChannels, setYtLoadingChannels] = useState(false)
-  const [ytChannelsError, setYtChannelsError] = useState('')
-  const [selectedChannel, setSelectedChannel] = useState<YourticketChannel | null>(null)
 
   const handleClose = () => {
     setShowEventChoiceModal(false)
@@ -151,17 +140,13 @@ function EventChoiceModal() {
     setShowNewShopInput(false)
     setNewShopName('')
     // Yourticket reset
-    setYtEmail('')
-    setYtPassword('')
-    setShowYtPassword(false)
+    setYtApiKey('')
+    setShowYtApiKey(false)
     setYtConnectError('')
     setYourticketEvents([])
     setYtEventsError('')
     setYtEventSearch('')
     setSelectedYourticketEvent(null)
-    setYourticketChannels([])
-    setYtChannelsError('')
-    setSelectedChannel(null)
   }
 
   const handleWeeztixConnect = async () => {
@@ -273,8 +258,8 @@ function EventChoiceModal() {
 
   /* ── Yourticket handlers ───────────────────────────────── */
   const handleYourticketConnect = async () => {
-    if (!ytEmail.trim() || !ytPassword.trim()) {
-      setYtConnectError('Vul zowel e-mail als wachtwoord in')
+    if (!ytApiKey.trim()) {
+      setYtConnectError('Vul je API key in')
       return
     }
     setYtConnecting(true)
@@ -283,7 +268,7 @@ function EventChoiceModal() {
       const res = await fetch('/api/integrations/yourticket', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: ytEmail.trim(), password: ytPassword.trim() }),
+        body: JSON.stringify({ apiKey: ytApiKey.trim() }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -325,33 +310,6 @@ function EventChoiceModal() {
     fetchYourticketEvents()
   }
 
-  /* fetch Yourticket channels for selected event */
-  const fetchYourticketChannels = async (eventUuid: string) => {
-    setYtLoadingChannels(true)
-    setYtChannelsError('')
-    try {
-      const res = await fetch(`/api/integrations/yourticket/channels?event_uuid=${eventUuid}`)
-      if (!res.ok) {
-        const data = await res.json()
-        setYtChannelsError(data.error || 'Kon channels niet ophalen')
-        return
-      }
-      const data = await res.json()
-      setYourticketChannels(Array.isArray(data) ? data : [])
-    } catch {
-      setYtChannelsError('Kon channels niet ophalen van Yourticket')
-    } finally {
-      setYtLoadingChannels(false)
-    }
-  }
-
-  /* go to channels step */
-  const goToYourticketChannels = () => {
-    if (!selectedYourticketEvent) return
-    setStep('yourticket-channels')
-    fetchYourticketChannels(selectedYourticketEvent.uuid)
-  }
-
   /* import selected Yourticket event */
   const handleImportYourticketEvent = async () => {
     if (!selectedYourticketEvent) return
@@ -366,8 +324,8 @@ function EventChoiceModal() {
           startDate: selectedYourticketEvent.start || null,
           endDate: selectedYourticketEvent.end || null,
           ticketProvider: 'yourticket',
-          ticketShopId: selectedChannel?.uuid || selectedYourticketEvent.uuid,
-          ticketShopName: selectedChannel?.name || selectedYourticketEvent.name,
+          ticketShopId: String(selectedYourticketEvent.id),
+          ticketShopName: selectedYourticketEvent.name,
         }),
       })
       if (!res.ok) {
@@ -380,7 +338,7 @@ function EventChoiceModal() {
       setSelectedEvent(newEvent)
       handleClose()
     } catch {
-      setYtChannelsError('Er ging iets mis bij het importeren')
+      setYtEventsError('Er ging iets mis bij het importeren')
     } finally {
       setYtImporting(false)
     }
@@ -930,48 +888,43 @@ function EventChoiceModal() {
               </div>
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 leading-tight">Yourticket koppelen</h2>
-                <p className="text-xs text-gray-500">CM.com Ticketing API</p>
+                <p className="text-xs text-gray-500">YourTicketProvider Ticketing API</p>
               </div>
             </div>
 
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-5">
               <p className="text-sm text-blue-800">
-                Gebruik de inloggegevens die je van CM.com hebt ontvangen voor de Partner API. Neem contact op met je account manager bij CM.com als je nog geen toegang hebt.
+                Vul je API key in vanuit je Yourticket account. Je vindt deze onder{' '}
+                <a
+                  href="https://yourticketprovider.nl/account/accountintegrations/ticketing-api"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline font-medium"
+                >
+                  Account &gt; Integraties &gt; Ticketing API
+                </a>.
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  E-mailadres
-                </label>
-                <input
-                  type="email"
-                  value={ytEmail}
-                  onChange={(e) => setYtEmail(e.target.value)}
-                  placeholder="john.doe@example.com"
-                  className="w-full px-3 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Wachtwoord
+                  API Key
                 </label>
                 <div className="relative">
                   <input
-                    type={showYtPassword ? 'text' : 'password'}
-                    value={ytPassword}
-                    onChange={(e) => setYtPassword(e.target.value)}
-                    placeholder="••••••••••••••••"
+                    type={showYtApiKey ? 'text' : 'password'}
+                    value={ytApiKey}
+                    onChange={(e) => setYtApiKey(e.target.value)}
+                    placeholder="Plak hier je API key"
                     className="w-full px-3 py-2.5 pr-10 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowYtPassword(!showYtPassword)}
+                    onClick={() => setShowYtApiKey(!showYtApiKey)}
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showYtPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    {showYtApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
@@ -985,14 +938,14 @@ function EventChoiceModal() {
 
             <div className="mt-6 flex gap-3">
               <button
-                onClick={() => { setStep('providers'); setYtEmail(''); setYtPassword(''); setYtConnectError('') }}
+                onClick={() => { setStep('providers'); setYtApiKey(''); setYtConnectError('') }}
                 className="flex-1 px-4 py-2.5 bg-gray-100 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-200 transition-colors"
               >
                 Annuleren
               </button>
               <button
                 onClick={handleYourticketConnect}
-                disabled={ytConnecting || !ytEmail.trim() || !ytPassword.trim()}
+                disabled={ytConnecting || !ytApiKey.trim()}
                 className="flex-1 px-4 py-2.5 bg-[#3EADD4] text-white text-sm font-medium rounded-lg hover:bg-[#2E9DC4] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {ytConnecting ? (
@@ -1057,10 +1010,10 @@ function EventChoiceModal() {
                 </div>
               ) : (
                 filteredYtEvents.map((evt) => {
-                  const isSelected = selectedYourticketEvent?.uuid === evt.uuid
+                  const isSelected = selectedYourticketEvent?.id === evt.id
                   return (
                     <button
-                      key={evt.uuid}
+                      key={evt.id}
                       onClick={() => setSelectedYourticketEvent(isSelected ? null : evt)}
                       className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${
                         isSelected
@@ -1098,107 +1051,10 @@ function EventChoiceModal() {
               )}
             </div>
 
-            {/* Next button */}
-            <button
-              onClick={goToYourticketChannels}
-              disabled={!selectedYourticketEvent}
-              className="w-full px-4 py-2.5 bg-[#3EADD4] text-white text-sm font-medium rounded-lg hover:bg-[#2E9DC4] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              Volgende →
-            </button>
-          </>
-        ) : step === 'yourticket-channels' ? (
-          <>
-            {/* ── Yourticket channels selection ── */}
-            <div className="flex items-center gap-3 mb-4">
-              <button
-                onClick={() => { setStep('yourticket-events'); setYtChannelsError(''); setSelectedChannel(null) }}
-                className="p-1 -ml-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <div className="w-9 h-9 bg-[#3EADD4] rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xs">YT</span>
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 leading-tight">Ticket Channel</h2>
-                <p className="text-xs text-gray-500">Selecteer een verkoopkanaal</p>
-              </div>
-            </div>
-
-            {/* Selected event summary */}
-            {selectedYourticketEvent && (
-              <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-                <p className="text-xs text-gray-500 mb-0.5">Geselecteerd event</p>
-                <p className="text-sm font-medium text-gray-900">{selectedYourticketEvent.name}</p>
-                {selectedYourticketEvent.start && (
-                  <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                    <Calendar className="h-3 w-3" />
-                    {new Date(selectedYourticketEvent.start).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {/* Channels list */}
-            <div className="max-h-52 overflow-y-auto space-y-1.5 mb-4">
-              {ytLoadingChannels ? (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-500">Channels ophalen uit Yourticket...</p>
-                </div>
-              ) : ytChannelsError ? (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="text-sm text-red-800">{ytChannelsError}</p>
-                  <button
-                    onClick={() => selectedYourticketEvent && fetchYourticketChannels(selectedYourticketEvent.uuid)}
-                    className="mt-2 text-sm text-red-700 underline font-medium"
-                  >
-                    Opnieuw proberen
-                  </button>
-                </div>
-              ) : yourticketChannels.length === 0 ? (
-                <div className="text-center py-6">
-                  <Store className="mx-auto h-8 w-8 text-gray-300 mb-2" />
-                  <p className="text-sm text-gray-500">
-                    Geen channels gevonden. Je kunt het event direct importeren.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Beschikbare channels</p>
-                  {yourticketChannels.map((channel) => {
-                    const isSelected = selectedChannel?.uuid === channel.uuid
-                    return (
-                      <button
-                        key={channel.uuid}
-                        onClick={() => setSelectedChannel(isSelected ? null : channel)}
-                        className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
-                          isSelected
-                            ? 'border-blue-400 bg-blue-50 ring-1 ring-blue-200'
-                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
-                          isSelected ? 'border-blue-500 bg-blue-500' : 'border-gray-300'
-                        }`}>
-                          {isSelected && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-white" />
-                          )}
-                        </div>
-                        <Store className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                        <span className="font-medium text-gray-900 text-sm truncate">{channel.name}</span>
-                      </button>
-                    )
-                  })}
-                </>
-              )}
-            </div>
-
             {/* Import button */}
             <button
               onClick={handleImportYourticketEvent}
-              disabled={ytImporting}
+              disabled={!selectedYourticketEvent || ytImporting}
               className="w-full px-4 py-2.5 bg-[#3EADD4] text-white text-sm font-medium rounded-lg hover:bg-[#2E9DC4] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {ytImporting ? (

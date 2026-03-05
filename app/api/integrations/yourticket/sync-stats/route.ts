@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { getYourticketToken, yourticketHeaders, YOURTICKET_API_BASE } from '@/lib/yourticket'
+import { getYourticketApiKey, yourticketHeaders, YOURTICKET_API_BASE } from '@/lib/yourticket'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -10,11 +10,11 @@ export const dynamic = 'force-dynamic'
 /**
  * POST /api/integrations/yourticket/sync-stats
  *
- * Fetches orders from the CM.com Ticketing API for each event that has
+ * Fetches purchases from the YTP Ticketing API for each event that has
  * ambassadors with trackers, and updates ticket sales stats.
  *
- * CM.com orders endpoint: GET /events/{event_uuid}/orders
- * Orders contain channel info which we can match to our tracked channels.
+ * YTP API: GET /Events(<id>)/Purchases?$expand=PurchaseItems
+ * Purchases contain PurchaseItems with ticket details.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -30,9 +30,9 @@ export async function POST(request: NextRequest) {
 
     const organizationId = session.user.organizationId
 
-    // Get Yourticket credentials
-    const token = await getYourticketToken(organizationId)
-    if (!token) {
+    // Get Yourticket API key
+    const creds = await getYourticketApiKey(organizationId)
+    if (!creds) {
       return NextResponse.json(
         { error: 'Yourticket niet verbonden. Verbind eerst via Integraties.' },
         { status: 400 }
@@ -67,16 +67,16 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const headers = yourticketHeaders(token)
+    const headers = yourticketHeaders(creds.apiKey)
     const now = new Date()
     let synced = 0
     const debugInfo: any[] = []
 
-    // Group ambassador events by their event's ticketShopId (which is the event UUID in Yourticket)
-    const eventUuids = new Set<string>()
+    // Group ambassador events by their event's ticketShopId (which stores the YTP event ID)
+    const eventIds = new Set<string>()
     for (const ae of ambassadorEvents) {
       if (ae.event.ticketShopId) {
-        eventUuids.add(ae.event.ticketShopId)
+        eventIds.add(ae.event.ticketShopId)
       }
     }
 
@@ -84,56 +84,43 @@ export async function POST(request: NextRequest) {
     const codeToTickets = new Map<string, number>()
     const codeToRevenue = new Map<string, number>()
 
-    // Fetch orders for each event UUID
-    for (const eventUuid of Array.from(eventUuids)) {
+    // Fetch purchases for each event ID
+    for (const eventId of Array.from(eventIds)) {
       try {
-        let skip = 0
-        const take = 20
-        let hasMore = true
+        // Use OData $expand to include PurchaseItems, and $filter for paid purchases
+        const res = await fetch(
+          `${YOURTICKET_API_BASE}/Events(${eventId})/Purchases?$filter=Paid eq true&$expand=PurchaseItems`,
+          { headers }
+        )
 
-        while (hasMore) {
-          const res = await fetch(
-            `${YOURTICKET_API_BASE}/events/${eventUuid}/orders?status=COMPLETED`,
-            {
-              headers: {
-                ...headers,
-                'X-TF-PAGINATION-SKIP': String(skip),
-              },
-            }
-          )
+        if (!res.ok) {
+          const errText = await res.text()
+          console.error(`[sync-stats] Purchases fetch failed for event ${eventId}:`, res.status, errText)
+          continue
+        }
 
-          if (!res.ok) {
-            const errText = await res.text()
-            console.error(`[sync-stats] Orders fetch failed for event ${eventUuid}:`, res.status, errText)
-            break
+        const data = await res.json()
+        const purchases = data.value ?? data ?? []
+
+        // Process purchases — count tickets and revenue
+        for (const purchase of purchases) {
+          // Check if this purchase has a reference/tracking code matching one of our trackers
+          const reference = purchase.Reference || ''
+          const items = purchase.PurchaseItems ?? []
+          const ticketCount = items.length || 1
+          const totalAmount = purchase.TotalAmount || 0
+
+          // Try to match by reference code (this is how tracking typically works in YTP)
+          if (reference) {
+            const current = codeToTickets.get(reference) || 0
+            codeToTickets.set(reference, current + ticketCount)
+
+            const currentRevenue = codeToRevenue.get(reference) || 0
+            codeToRevenue.set(reference, currentRevenue + Math.round(totalAmount * 100)) // store in cents
           }
-
-          const data = await res.json()
-          const orders = Array.isArray(data) ? data : data.data ?? data.orders ?? []
-
-          // Process orders — look for tracker/channel references
-          for (const order of orders) {
-            const channelCode = order.channelCode || order.channel?.code || order.trackingCode || order.utmSource
-            if (channelCode) {
-              const current = codeToTickets.get(channelCode) || 0
-              const ticketCount = order.ticketCount || order.quantity || order.items?.length || 1
-              codeToTickets.set(channelCode, current + ticketCount)
-
-              const revenue = order.totalAmount || order.total || order.revenue || 0
-              const currentRevenue = codeToRevenue.get(channelCode) || 0
-              codeToRevenue.set(channelCode, currentRevenue + Math.round(revenue * 100)) // store in cents
-            }
-          }
-
-          const total = parseInt(res.headers.get('x-tf-pagination-total') || '0', 10)
-          skip += take
-          hasMore = skip < total && orders.length > 0
-
-          // Safety: max 1000 orders per event
-          if (skip >= 1000) break
         }
       } catch (e) {
-        console.error(`[sync-stats] Error fetching orders for event ${eventUuid}:`, e)
+        console.error(`[sync-stats] Error fetching purchases for event ${eventId}:`, e)
       }
     }
 
