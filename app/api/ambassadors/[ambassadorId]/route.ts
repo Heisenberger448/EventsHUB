@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { getWeeztixToken } from '@/lib/weeztix'
+import crypto from 'crypto'
 
 export async function GET(
   req: NextRequest,
@@ -217,6 +218,22 @@ export async function PATCH(
               )
             }
           }
+        }
+
+        // Yourticket: generate our own tracker code (no external API needed)
+        if (event?.ticketProvider === 'yourticket' && event.ticketShopId) {
+          const trackerCode = crypto.randomBytes(6).toString('hex') // 12-char unique code
+          const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+          const trackerUrl = `${baseUrl}/t/${trackerCode}`
+
+          await prisma.ambassadorEvent.update({
+            where: { id: params.ambassadorId },
+            data: {
+              trackerGuid: `ytp-${trackerCode}`,
+              trackerCode,
+              trackerUrl,
+            },
+          })
         }
       } catch (trackerErr) {
         // Don't fail the accept if tracker creation fails

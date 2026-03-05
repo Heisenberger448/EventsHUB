@@ -1,0 +1,163 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/prisma'
+import { getYourticketApiKey, yourticketHeaders, YOURTICKET_API_BASE } from '@/lib/yourticket'
+
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
+/**
+ * POST /api/tracker/[trackerCode]/purchase
+ *
+ * Public endpoint — creates a YTP purchase via POST /Purchases with our
+ * PurchaseSuccessWebhookUrl so we can attribute the sale to the ambassador.
+ *
+ * Body: {
+ *   email: string,
+ *   firstName: string,
+ *   lastName: string,
+ *   items: [{ ticketId: number, quantity: number }]
+ * }
+ *
+ * Returns: { paymentUrl: string } — redirect buyer to this URL for payment.
+ */
+export async function POST(
+  req: NextRequest,
+  { params }: { params: { trackerCode: string } }
+) {
+  try {
+    const { trackerCode } = params
+    const body = await req.json()
+    const { email, firstName, lastName, items } = body
+
+    if (!email || !items || !Array.isArray(items) || items.length === 0) {
+      return NextResponse.json(
+        { error: 'E-mail en minstens 1 ticket zijn verplicht.' },
+        { status: 400 }
+      )
+    }
+
+    // Look up ambassador event
+    const ambassadorEvent = await prisma.ambassadorEvent.findFirst({
+      where: {
+        trackerCode,
+        status: 'ACCEPTED',
+      },
+      include: {
+        event: true,
+      },
+    })
+
+    if (!ambassadorEvent) {
+      return NextResponse.json(
+        { error: 'Tracker niet gevonden of niet actief.' },
+        { status: 404 }
+      )
+    }
+
+    const { event } = ambassadorEvent
+
+    if (event.ticketProvider !== 'yourticket' || !event.ticketShopId) {
+      return NextResponse.json(
+        { error: 'Dit evenement gebruikt geen Yourticket Provider.' },
+        { status: 400 }
+      )
+    }
+
+    // Get YTP API credentials
+    const creds = await getYourticketApiKey(event.organizationId)
+    if (!creds) {
+      return NextResponse.json(
+        { error: 'Yourticket integratie niet gevonden.' },
+        { status: 500 }
+      )
+    }
+
+    const headers = yourticketHeaders(creds.apiKey)
+    const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || ''
+
+    // Build webhook URL with tracker code embedded
+    // YTP replaces %purchaseId%, %email%, %eventId%, %secret% automatically
+    const webhookUrl = `${baseUrl}/api/webhooks/ytp?tracker=${trackerCode}&purchaseId=%purchaseId%&secret=%secret%`
+    const successRedirectUrl = `${baseUrl}/t/${trackerCode}/success`
+
+    // Build PurchaseItems array for YTP
+    const purchaseItems: any[] = []
+    for (const item of items) {
+      for (let i = 0; i < (item.quantity || 1); i++) {
+        purchaseItems.push({
+          TicketId: item.ticketId,
+          TicketHolderFirstName: firstName || '',
+          TicketHolderLastName: lastName || '',
+          TicketHolderEmail: email,
+        })
+      }
+    }
+
+    // Create purchase via YTP API
+    const purchaseBody = {
+      EventId: parseInt(event.ticketShopId, 10),
+      Email: email,
+      PurchaseItems: purchaseItems,
+      PurchaseSuccessWebhookUrl: webhookUrl,
+      SuccessfulPurchaseRedirectUrl: successRedirectUrl,
+    }
+
+    console.log('[tracker/purchase] Creating YTP purchase:', JSON.stringify(purchaseBody, null, 2))
+
+    const purchaseRes = await fetch(`${YOURTICKET_API_BASE}/Purchases`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(purchaseBody),
+    })
+
+    if (!purchaseRes.ok) {
+      const errText = await purchaseRes.text()
+      console.error('[tracker/purchase] YTP purchase failed:', purchaseRes.status, errText)
+      return NextResponse.json(
+        { error: `Bestelling kon niet worden aangemaakt: ${errText}` },
+        { status: 502 }
+      )
+    }
+
+    const purchaseData = await purchaseRes.json()
+    const ytpPurchaseId = purchaseData.Id
+    const paymentUrl = purchaseData.PaymentUrl
+    const secret = purchaseData.Secret
+
+    console.log('[tracker/purchase] YTP purchase created:', {
+      ytpPurchaseId,
+      paymentUrl,
+      secret,
+    })
+
+    // Store the purchase in our DB as pending
+    const totalAmount = Math.round((purchaseData.TotalAmount || 0) * 100) // store in cents
+
+    await prisma.trackerPurchase.create({
+      data: {
+        ambassadorEventId: ambassadorEvent.id,
+        ytpPurchaseId,
+        email,
+        totalAmount,
+        ticketCount: purchaseItems.length,
+        secret,
+        paid: false,
+      },
+    })
+
+    if (!paymentUrl) {
+      return NextResponse.json(
+        { error: 'Geen betaallink ontvangen van Yourticket.' },
+        { status: 502 }
+      )
+    }
+
+    return NextResponse.json({ paymentUrl })
+  } catch (error) {
+    console.error('[tracker/purchase] Error:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

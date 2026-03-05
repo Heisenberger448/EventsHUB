@@ -163,7 +163,7 @@ model AmbassadorEvent {
   gender    String?
   address   String?
   trackerGuid  String?
-  trackerCode  String?
+  trackerCode  String?           @unique
   trackerUrl   String?
   ticketsSold  Int              @default(0)
   ticketRevenue Int             @default(0)
@@ -172,11 +172,33 @@ model AmbassadorEvent {
   
   user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   event     Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  trackerPurchases TrackerPurchase[]
   
   @@unique([userId, eventId])
   @@index([userId])
   @@index([eventId])
   @@index([status])
+}
+
+// Tracks purchases created via our own checkout flow (YTP API POST /Purchases)
+// Confirmed via PurchaseSuccessWebhookUrl callback from YTP
+model TrackerPurchase {
+  id                String           @id @default(cuid())
+  ambassadorEventId String
+  ytpPurchaseId     Int
+  email             String
+  totalAmount       Int              @default(0) // in cents
+  ticketCount       Int              @default(0)
+  secret            String?
+  paid              Boolean          @default(false)
+  paidAt            DateTime?
+  createdAt         DateTime         @default(now())
+
+  ambassadorEvent   AmbassadorEvent  @relation(fields: [ambassadorEventId], references: [id], onDelete: Cascade)
+
+  @@unique([ytpPurchaseId])
+  @@index([ambassadorEventId])
+  @@index([email])
 }
 
 model Reward {
