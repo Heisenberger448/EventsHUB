@@ -771,7 +771,7 @@ function EventChoiceModal() {
               Volgende →
             </button>
           </>
-        ) : (
+        ) : step === 'weeztix-shops' ? (
           <>
             {/* ── Weeztix shops selection ── */}
             <div className="flex items-center gap-3 mb-4">
@@ -1211,7 +1211,7 @@ function EventChoiceModal() {
               )}
             </button>
           </>
-        )}
+        ) : null}
       </div>
     </div>
   )
