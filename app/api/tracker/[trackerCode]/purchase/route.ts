@@ -97,6 +97,7 @@ export async function POST(
       EventId: parseInt(event.ticketShopId, 10),
       Email: email,
       IncludeTicketGuarantee: false,
+      HasAcceptedTermsAndAgreements: true,
       PurchaseItems: purchaseItems,
       PurchaseSuccessWebhookUrl: webhookUrl,
       SuccessfulPurchaseRedirectUrl: successRedirectUrl,

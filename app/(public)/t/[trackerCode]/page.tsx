@@ -306,6 +306,28 @@ export default function TrackerPage({ params }: { params: { trackerCode: string 
               </div>
             </div>
 
+            {/* Terms */}
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="terms"
+                required
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+              />
+              <label htmlFor="terms" className="text-xs text-gray-600">
+                Ik ga akkoord met de{' '}
+                <a
+                  href="https://www.yourticketprovider.nl/algemenevoorwaarden"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-600 underline"
+                >
+                  algemene voorwaarden
+                </a>{' '}
+                van Yourticket Provider.
+              </label>
+            </div>
+
             {/* Submit */}
             <button
               type="submit"
