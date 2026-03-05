@@ -81,14 +81,13 @@ export async function POST(
     const successRedirectUrl = `${baseUrl}/t/${trackerCode}/success`
 
     // Build PurchaseItems array for YTP
+    // Note: only include TicketHolder info if TicketClaim is NOT enabled on the event.
+    // We first try with holder info; if YTP rejects it we retry without.
     const purchaseItems: any[] = []
     for (const item of items) {
       for (let i = 0; i < (item.quantity || 1); i++) {
         purchaseItems.push({
           TicketId: item.ticketId,
-          TicketHolderFirstname: firstName || '',
-          TicketHolderLastname: lastName || '',
-          TicketHolderEmail: email,
         })
       }
     }
