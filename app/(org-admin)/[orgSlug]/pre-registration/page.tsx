@@ -41,11 +41,14 @@ export default function PreRegistrationPage({ params }: { params: { orgSlug: str
 
   useEffect(() => {
     fetchPreRegistrations()
-  }, [])
+  }, [selectedEvent])
 
   const fetchPreRegistrations = async () => {
     try {
-      const res = await fetch('/api/pre-registrations')
+      const url = selectedEvent
+        ? `/api/pre-registrations?eventId=${selectedEvent.id}`
+        : '/api/pre-registrations'
+      const res = await fetch(url)
       if (res.ok) {
         const data = await res.json()
         setPreRegistrations(data)

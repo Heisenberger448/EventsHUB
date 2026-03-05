@@ -16,8 +16,13 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'User not associated with an organization' }, { status: 400 })
     }
 
+    const eventId = req.nextUrl.searchParams.get('eventId')
+
     const preRegistrations = await prisma.preRegistration.findMany({
-      where: { organizationId: session.user.organizationId },
+      where: {
+        organizationId: session.user.organizationId,
+        ...(eventId ? { eventId } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       include: {
         event: { select: { id: true, name: true } },
