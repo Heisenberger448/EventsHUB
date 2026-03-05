@@ -143,15 +143,34 @@ export async function POST(
       },
     })
 
-    // Step 2: Start payment via YTP.StartPayment to get PaymentUrl
-    // For free purchases (€0,00) we also call StartPayment — YTP handles it
+    // Step 2: Fetch available payment methods for this event
+    let paymentType = 'ideal' // default fallback
+    try {
+      const pmRes = await fetch(
+        `${YOURTICKET_API_BASE}/Events(${event.ticketShopId})/PaymentMethods`,
+        { headers }
+      )
+      if (pmRes.ok) {
+        const pmData = await pmRes.json()
+        const methods = pmData.value ?? pmData ?? []
+        console.log('[tracker/purchase] Available payment methods:', methods.map((m: any) => m.Type))
+        if (methods.length > 0) {
+          paymentType = methods[0].Type
+        }
+      }
+    } catch (pmErr) {
+      console.error('[tracker/purchase] Failed to fetch payment methods:', pmErr)
+    }
+
+    // Step 3: Start payment via YTP.StartPayment to get PaymentUrl
+    console.log('[tracker/purchase] Starting payment with type:', paymentType)
     const startPaymentRes = await fetch(
       `${YOURTICKET_API_BASE}/Purchases(${ytpPurchaseId})/YTP.StartPayment`,
       {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          paymentType: 'ideal',
+          paymentType,
         }),
       }
     )
