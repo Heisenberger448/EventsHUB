@@ -121,18 +121,16 @@ export async function POST(
 
     const purchaseData = await purchaseRes.json()
     const ytpPurchaseId = purchaseData.Id
-    const paymentUrl = purchaseData.PaymentUrl
     const secret = purchaseData.Secret
+    const totalAmount = Math.round((purchaseData.TotalAmount || 0) * 100) // store in cents
 
     console.log('[tracker/purchase] YTP purchase created:', {
       ytpPurchaseId,
-      paymentUrl,
+      totalAmount,
       secret,
     })
 
     // Store the purchase in our DB as pending
-    const totalAmount = Math.round((purchaseData.TotalAmount || 0) * 100) // store in cents
-
     await prisma.trackerPurchase.create({
       data: {
         ambassadorEventId: ambassadorEvent.id,
@@ -145,11 +143,65 @@ export async function POST(
       },
     })
 
-    if (!paymentUrl) {
+    // Step 2: Start payment via YTP.StartPayment to get PaymentUrl
+    // For free purchases (€0,00) we also call StartPayment — YTP handles it
+    const startPaymentRes = await fetch(
+      `${YOURTICKET_API_BASE}/Purchases(${ytpPurchaseId})/YTP.StartPayment`,
+      {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          paymentType: 'ideal',
+        }),
+      }
+    )
+
+    if (!startPaymentRes.ok) {
+      const errText = await startPaymentRes.text()
+      console.error('[tracker/purchase] StartPayment failed:', startPaymentRes.status, errText)
+
+      // For free tickets, the purchase may already be "paid" — redirect to success
+      if (totalAmount === 0) {
+        // Mark as paid in our DB
+        await prisma.trackerPurchase.update({
+          where: { ytpPurchaseId },
+          data: { paid: true, paidAt: new Date() },
+        })
+
+        // Recalculate ambassador totals
+        const totals = await prisma.trackerPurchase.aggregate({
+          where: { ambassadorEventId: ambassadorEvent.id, paid: true },
+          _sum: { totalAmount: true, ticketCount: true },
+        })
+        await prisma.ambassadorEvent.update({
+          where: { id: ambassadorEvent.id },
+          data: {
+            ticketsSold: totals._sum.ticketCount || 0,
+            ticketRevenue: totals._sum.totalAmount || 0,
+            lastSyncedAt: new Date(),
+          },
+        })
+
+        return NextResponse.json({ paymentUrl: successRedirectUrl })
+      }
+
       return NextResponse.json(
-        { error: 'Geen betaallink ontvangen van Yourticket.' },
+        { error: 'Betaling starten mislukt.' },
         { status: 502 }
       )
+    }
+
+    const startPaymentData = await startPaymentRes.json()
+    const paymentUrl = startPaymentData.PaymentUrl
+
+    console.log('[tracker/purchase] StartPayment result:', {
+      ytpPurchaseId,
+      paymentUrl,
+    })
+
+    if (!paymentUrl) {
+      // If no payment URL (e.g. free ticket already completed), redirect to success
+      return NextResponse.json({ paymentUrl: successRedirectUrl })
     }
 
     return NextResponse.json({ paymentUrl })
