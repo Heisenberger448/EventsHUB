@@ -86,8 +86,8 @@ export async function POST(
       for (let i = 0; i < (item.quantity || 1); i++) {
         purchaseItems.push({
           TicketId: item.ticketId,
-          TicketHolderFirstName: firstName || '',
-          TicketHolderLastName: lastName || '',
+          TicketHolderFirstname: firstName || '',
+          TicketHolderLastname: lastName || '',
           TicketHolderEmail: email,
         })
       }
@@ -97,6 +97,7 @@ export async function POST(
     const purchaseBody = {
       EventId: parseInt(event.ticketShopId, 10),
       Email: email,
+      IncludeTicketGuarantee: false,
       PurchaseItems: purchaseItems,
       PurchaseSuccessWebhookUrl: webhookUrl,
       SuccessfulPurchaseRedirectUrl: successRedirectUrl,
